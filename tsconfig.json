@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "watch": true,
+    "strict": true,
+    "allowJs": true,
+    "target": "es6",
+    "module": "commonjs",
+    "removeComments": true,
+    "inlineSourceMap": true,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true
+  },
+  "exclude": [
+    "node_modules"
+  ]
+}

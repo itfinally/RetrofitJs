@@ -1,0 +1,10 @@
+.git
+.idea
+.DS_store
+
+test
+target
+node_modules
+
+index.js
+src/**/*.js

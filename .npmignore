@@ -1,0 +1,12 @@
+.git
+.idea
+.DS_Store
+.gitignore
+.npmignore
+
+target
+npm-debug.log
+package-lock.json
+
+index.js
+src/**/*.js
