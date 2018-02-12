@@ -32,7 +32,7 @@ npm install retrofitjs
 // This is typescript demo, also javascript demo( it is if you remove all type define )
 
 // In the first step, you must create your retrofit object. 
-let client = new Retrofit.Builder()
+let client = Retrofit.getBuilder()
   .setConfig<RetrofitConfig>( { /** config, you can use retrofit config or axios config */ } )
   .addInterceptor( /** your interceptor */ )
   .setErrorHandler( /** define your error handler */ )
