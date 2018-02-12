@@ -1,17 +1,17 @@
 # RetrofitJs
 
 Axios based declarative HTTP client for the browser and node.js.<br/>
-Written by a java programmer who got used to declarative HTTP client<br/>
+Written by a java programmer who got used to declarative HTTP client.<br/>
 
 The goal is provide a simple, concise http client in all javascript/typescript environment, ( es6 environment, actually )
-let us focus on declarative own http interface rather than http details, just like retrofit did, write less, do more.
+let us focus on declare own http interface rather than http details, just like Retrofit did, write less, do more.
 
 In the last, thank for all peoples who written or update [Axios](https://github.com/axios/axios) ( javascript http client ) and [Retrofit](https://github.com/square/retrofit) ( java http client ) very much, those are wonderful projects, it teach me a lot.
 
 ## Feature
-* Fully compatible with the axios feature
-* Totally declarative interface by decorators, focus on your interface
-* Unified interceptor process chain, no longer split request/response process in interceptor
+* Fully compatible with the axios feature.
+* Totally declarative interface by decorators, focus on your interface.
+* Unified interceptor process chain, no longer split request/response process in interceptor.
 
 ## Support
 This program can't working on IE8/9/10/11 and other environment( usually browser ) who not support es6 in native,
@@ -249,11 +249,11 @@ Doesn't support yet, add in next version.
 This is the last chapter, as you can see, RetrofitJs provide a platform only, and all http interface must be write by yourself.
 
 Also you can <strong>write a common interface and extend it</strong>, then information collector working as follows:
-	1. searching method in prototype chain
-	2. collect method information
-	3. find all class information, and combine information in the order of parent to child
-	4. search config in current parameter
-	5. combine all information and send a real request to interceptor chain
+ 1. searching method in prototype chain
+ 2. collect method information
+ 3. find all class information, and combine information in the order of parent to child
+ 4. search config in current parameter
+ 5. combine all information and send a real request to interceptor chain
 
 In short, information priority chain follow this:
 	@Config > method > this class > super class
