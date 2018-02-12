@@ -4,9 +4,9 @@
 .gitignore
 .npmignore
 
+test
 target
+tsconfig.json
 npm-debug.log
 package-lock.json
-
-index.js
-src/**/*.js
+webpack.config.js

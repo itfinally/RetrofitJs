@@ -1,8 +1,6 @@
-import { CoreUtils } from "jcdt";
-
-import Axios, {
-  AxiosAdapter, AxiosBasicCredentials, AxiosProxyConfig, AxiosRequestConfig,
-  AxiosResponse, AxiosTransformer, CancelToken, CancelTokenSource
+import {
+  AxiosAdapter, AxiosBasicCredentials, AxiosProxyConfig, AxiosRequestConfig, AxiosResponse,
+  AxiosTransformer, CancelToken, CancelTokenSource
 } from "axios";
 
 export enum ResponseType {
@@ -44,9 +42,6 @@ export interface RetrofitConfig {
   proxy?: AxiosProxyConfig;
   paramsSerializer?: ( params: any ) => string;
 
-  // retryCondition?: ( reason: any ) => boolean;
-  // allowCache?: boolean;
-  // maxTryTime?: number;
   debug?: boolean;
 }
 
@@ -64,14 +59,14 @@ export interface ResponseInterface<T = any> extends AxiosResponse<T> {
 
 export class RetrofitRequest implements RequestInterFace {
   private cancelTokenSource: CancelTokenSource;
-  private cancelRequest: boolean = false;
-  private cancelMessage: string = "";
+  private cancelRequest: boolean;
+  private cancelMessage: string;
 
   private _requestToken: CancelToken;
   private _cancelToken: CancelToken;
 
-  public url: string = "";
-  public headers: any = Object.create( null );
+  public url: string;
+  public headers: any;
 
   public method?: string;
   public baseURL?: string;
@@ -96,48 +91,23 @@ export class RetrofitRequest implements RequestInterFace {
   public httpsAgent?: any;
   public proxy?: AxiosProxyConfig;
 
-  public constructor( config?: RequestInterFace ) {
-    if ( !CoreUtils.isNone( config ) ) {
-      Object.assign( this, config );
-    }
+  public constructor( config?: RequestInterFace );
 
-    this.cancelTokenSource = Axios.CancelToken.source();
-    this._cancelToken = this._requestToken = this.cancelTokenSource.token;
-  }
+  public cancel( message?: string ): void;
 
-  public cancel( message: string = "" ): void {
-    this.cancelTokenSource.cancel( message );
-    this.cancelMessage = message;
-    this.cancelRequest = true;
-  }
+  public getCancelMessage(): string;
 
-  public getCancelMessage(): string {
-    return this.cancelMessage;
-  }
-
-  get cancelToken(): CancelToken {
-    return this._requestToken;
-  }
-
-  public isCancel(): boolean {
-    return this.cancelRequest;
-  }
+  public isCancel(): boolean;
 }
 
 export class RetrofitResponse<T = any> implements ResponseInterface<T> {
-  public status: number = -1;
-  public data: T = <any>null;
-  public statusText: string = "";
-  public headers: any = <any>null;
+  public status: number;
+  public data: T;
+  public statusText: string;
+  public headers: any;
   public config: RequestInterFace;
 
-  public constructor( config: RequestInterFace, response?: AxiosResponse ) {
-    if ( !CoreUtils.isNone( response ) ) {
-      Object.assign( this, response );
-    }
-
-    this.config = config;
-  }
+  public constructor( config: RequestInterFace, response?: AxiosResponse );
 }
 
 export interface RetrofitPromise<T = any> extends Promise<ResponseInterface<T>> {

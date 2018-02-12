@@ -3,7 +3,7 @@ import {
   Map, HashSet, Set, CoreUtils, StringUtils, IllegalArgumentException, HashMap,
   IndexOutOfBoundsException
 } from "jcdt";
-import { RequestInterFace, RetrofitRequest, RequestMethod } from "./core/define";
+import { RequestInterFace, RetrofitRequest } from "./core/define";
 import {
   BodyNotMatchException, HeaderNotMatchException, PathVariableNotMatchException,
   QueryParamNotMatchException,
@@ -30,16 +30,13 @@ class Validation {
   public constructor() {
     this.pipe = Object.getOwnPropertyNames( Object.getPrototypeOf( this ) )
       .filter( name => -1 === "checkIn constructor".indexOf( name ) )
-      .map( name => ( <any>this )[ name ]() )
-
-      .sort( ( a: MetadataHandler, b: MetadataHandler ): number =>
-        a.order === b.order ? 0 : a.order > b.order ? 1 : -1 );
+      .map( name => ( <any>this )[ name ]() );
   }
 
   private noBodyOrFormInGetRequest(): MetadataValidator {
     return {
       handler( metadata: MethodMetadata ): void {
-        if ( "requestMethod" in metadata && metadata.requestMethod !== RequestMethod.GET ) {
+        if ( "requestMethod" in metadata && metadata.requestMethod !== "get" ) {
           return;
         }
 
@@ -93,6 +90,24 @@ class Validation {
     };
   }
 
+  private isResponseType(): MetadataValidator {
+    let types: Set<string> = new HashSet<string>();
+
+    [ "arraybuffer", "blob", "document", "json", "text", "stream" ].forEach( key => types.add( key ) );
+
+    return {
+      handler( metadata: MethodMetadata ): void {
+        if ( !( "responseType" in metadata ) ) {
+          return;
+        }
+
+        if ( !types.contains( metadata.responseType ) ) {
+          throw new IllegalRequestException( "There are not response type." );
+        }
+      }
+    };
+  }
+
   public checkIn( metadata: MethodMetadata ): void {
     this.pipe.forEach( h => h.handler( metadata ) );
   }
@@ -137,7 +152,7 @@ export class RequestBuilder {
     return {
       order: 0,
       handler( metadata: MethodMetadata, parameter: any[], request: RequestInterFace ): void {
-        request.method = "requestMethod" in metadata ? metadata.requestMethod : RequestMethod.GET;
+        request.method = "requestMethod" in metadata ? metadata.requestMethod : "get";
       }
     };
   }
@@ -233,7 +248,7 @@ export class RequestBuilder {
         }
 
         for ( let header of headers ) {
-          let [ key, value ] = header.split( ":" );
+          let [ key, value ] = header.trim().split( ":" );
 
           if ( StringUtils.isBlank( key ) || StringUtils.isBlank( value ) ) {
             throw new HeaderNotMatchException( `Header require key-value entry.` );
@@ -308,6 +323,19 @@ export class RequestBuilder {
 
         request.data = body;
         request.headers[ "Content-Type" ] = "application/json;charset=UTF-8";
+      }
+    };
+  }
+
+  private responseBodyHandler(): MetadataHandler {
+    return {
+      order: 4,
+      handler( metadata: MethodMetadata, parameter: any[], request: RequestInterFace ): void {
+        if ( !( "responseType" in metadata ) ) {
+          return;
+        }
+
+        request.responseType = metadata.responseType;
       }
     };
   }

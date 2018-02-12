@@ -32,6 +32,7 @@ class CollectorUtils {
     let part1: string = classMapper.get( constructor ),
       part2: string = methodMapper.get( method ),
       tempUUID: string = CoreUtils.uuid().replace( /-/g, "" );
+
     if ( !part1 ) {
       part1 = tempUUID.substr( 0, 16 );
       classMapper.put( constructor, part1 );
@@ -63,7 +64,7 @@ export class Decorators {
     let key = CollectorUtils.getOrBuildKey( constructor, method );
 
     if ( this.metadataCache.containsKey( key ) ) {
-      return Object.assign( {}, this.metadataCache.get( key ) );
+      return Object.assign( Object.create( null ), this.metadataCache.get( key ) );
     }
 
     let methodMetadata = this.findMethodMetadata( constructor.prototype, method );
@@ -73,12 +74,12 @@ export class Decorators {
       return <any>null;
     }
 
-    let methodMetadataCopier = Object.assign( {}, methodMetadata ),
+    let methodMetadataCopier = Object.assign( Object.create( null ), methodMetadata ),
       finalMetadata = this.metadataMerge( methodMetadataCopier, this.findClassMetadata( constructor.prototype ) );
 
     this.metadataCache.put( key, finalMetadata );
 
-    return Object.assign( {}, finalMetadata );
+    return Object.assign( Object.create( null ), finalMetadata );
   }
 
   private static findMethodMetadata( prototype: object, method: string ): MethodMetadata {
@@ -208,13 +209,13 @@ export function PATCH( path: string ): Function {
   return HTTP( path, RequestMethod.PATCH );
 }
 
-export let Body = ( () => {
+export let Body: Function = ( () => {
   return basicParameterAnnotation( ( metadata, parameterIndex ) => {
     metadata.requestBodyIndex = parameterIndex;
   } );
 } )();
 
-export function Path( name: string ) {
+export function Path( name: string ): Function {
   if ( !CoreUtils.isString( name ) ) {
     throw new IllegalArgumentException( "Require path name." );
   }
@@ -228,7 +229,7 @@ export function Path( name: string ) {
   } );
 }
 
-export function Query( name: string ) {
+export function Query( name: string ): Function {
   if ( !CoreUtils.isString( name ) ) {
     throw new IllegalArgumentException( "Require query name." );
   }
@@ -242,7 +243,7 @@ export function Query( name: string ) {
   } );
 }
 
-export let QueryMap = ( () => {
+export let QueryMap: Function = ( () => {
   return basicParameterAnnotation( ( metadata, parameterIndex ) => {
     if ( CoreUtils.isNone( metadata.queryMaps ) ) {
       metadata.queryMaps = new HashSet();
@@ -252,7 +253,7 @@ export let QueryMap = ( () => {
   } );
 } )();
 
-export function Headers( headers: string | string[] ) {
+export function Headers( headers: string | string[] ): Function {
   if ( CoreUtils.isNone( headers ) ) {
     throw new IllegalArgumentException( "Require headers." );
   }
@@ -276,7 +277,7 @@ export function Headers( headers: string | string[] ) {
     }
 
     headersArr.forEach( header => {
-      header = header.replace( /^\s*|\s*$/g, "" );
+      header = header.trim();
 
       if ( !/[\w\-]+\s*:\s*.+/.test( header ) ) {
         throw new IllegalArgumentException( `Illegal header '${header}'.` );
@@ -287,7 +288,7 @@ export function Headers( headers: string | string[] ) {
   } );
 }
 
-export function Header( name: string ) {
+export function Header( name: string ): Function {
   if ( !CoreUtils.isString( name ) ) {
     throw new IllegalArgumentException( "Require header name." );
   }
@@ -301,9 +302,9 @@ export function Header( name: string ) {
   } );
 }
 
-export let FormUrlEncoded = ( () => basicMethodAnnotation( "form", metadata => metadata.isFormCommit = true ) )();
+export let FormUrlEncoded: Function = ( () => basicMethodAnnotation( "form", metadata => metadata.isFormCommit = true ) )();
 
-export function Field( name: string ) {
+export function Field( name: string ): Function {
   if ( !CoreUtils.isString( name ) ) {
     throw new IllegalArgumentException( "Require field name." );
   }
@@ -317,7 +318,7 @@ export function Field( name: string ) {
   } );
 }
 
-export let FieldMap = ( () => {
+export let FieldMap: Function = ( () => {
   return basicParameterAnnotation( ( metadata, parameterIndex ) => {
     if ( CoreUtils.isNone( metadata.fieldMaps ) ) {
       metadata.fieldMaps = new HashSet();
@@ -327,4 +328,12 @@ export let FieldMap = ( () => {
   } );
 } )();
 
-export let Config = ( () => basicParameterAnnotation( ( metadata, parameterIndex ) => metadata.configIndex = parameterIndex ) )();
+export let Config: Function = ( () => basicParameterAnnotation( ( metadata, parameterIndex ) => metadata.configIndex = parameterIndex ) )();
+
+export function ResponseBody( name: ResponseType = ResponseType.JSON ): Function {
+  if ( !CoreUtils.isString( name ) ) {
+    throw new IllegalArgumentException( "Require field name." );
+  }
+
+  return basicMethodAnnotation( "responseBody", metadata => metadata.responseType = name );
+}

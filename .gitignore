@@ -2,9 +2,7 @@
 .idea
 .DS_store
 
+dist
 test
 target
 node_modules
-
-index.js
-src/**/*.js

@@ -4,13 +4,19 @@
     "strict": true,
     "allowJs": true,
     "target": "es6",
+    "sourceMap": true,
+    "outDir": "./dist",
     "module": "commonjs",
+    "sourceRoot": "./src",
     "removeComments": true,
-    "inlineSourceMap": true,
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true
   },
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "definition",
+    "./**/*.js",
+    "test",
+    "dist"
   ]
 }

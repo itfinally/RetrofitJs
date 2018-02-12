@@ -1,4 +1,4 @@
-import { IllegalArgumentException, NullPointException, Set, CoreUtils, HashSet } from "jcdt";
+import { IllegalArgumentException, NullPointException, Set, CoreUtils, HashSet, IllegalStateException } from "jcdt";
 import { RequestInterFace, ResponseInterface, RetrofitConfig, RetrofitRequest } from "./define";
 import { RequestCancelException } from "./exception";
 
@@ -9,7 +9,7 @@ export interface Chain {
 }
 
 export interface Interceptor {
-  order?: number;
+  order: number;
 
   init( config: RetrofitConfig ): void;
 
@@ -34,6 +34,7 @@ export abstract class InterceptorChainActor {
     let that = this,
       chain: Chain = new class implements Chain {
         private index: number = 0;
+        private localRequest: RequestInterFace = <any>null;
         private length: number = that.localInterceptors.length;
         private interceptors: Interceptor[] = that.localInterceptors.slice();
 
@@ -44,25 +45,24 @@ export abstract class InterceptorChainActor {
             throw new NullPointException( "Request must not be null." );
           }
 
+          this.localRequest = request;
+
           if ( request.isCancel() ) {
             return Promise.reject( new RequestCancelException( request.getCancelMessage() ) );
           }
 
           let response: Promise<ResponseInterface> = this.index < this.length
             ? this.interceptors[ this.index++ ].intercept( this )
-            : new Promise( ( resolve, reject ) => reject( new IllegalArgumentException(
-              "No real call in this interceptor chain, request has been rejected." ) ) );
+            : Promise.reject( new IllegalStateException( "No real call in this interceptor chain, request has been rejected." ) );
 
           this.index -= 1;
           return response;
         }
 
         public request(): RequestInterFace {
-          return request;
+          return this.localRequest;
         }
       };
-
-    that = <any>null;
 
     return chain.proceed( request );
   }
@@ -72,8 +72,8 @@ export abstract class InterceptorChainActor {
 
     this.localInterceptors = this.getInterceptors().toArray();
     this.localInterceptors.sort( ( a: Interceptor, b: Interceptor ): number => {
-      let aOrder = CoreUtils.isNumber( a.order ) ? <number> a.order : 9999,
-        bOrder = CoreUtils.isNumber( b.order ) ? <number> b.order : 9999;
+      let aOrder = CoreUtils.isNumber( a.order ) && a.order >= 0 ? a.order : 9999,
+        bOrder = CoreUtils.isNumber( b.order ) && b.order >= 0 ? b.order : 9999;
 
       // to small from lager
       return aOrder === bOrder ? 0 : aOrder > bOrder ? -1 : 1;

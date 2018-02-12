@@ -1,8 +1,7 @@
 {
   "name": "retrofitjs",
-  "version": "0.0.1",
-  "description": "A ",
-  "main": "index.js",
+  "version": "0.2.0",
+  "description": "Axios based declarative HTTP client for the browser and node.js",
   "scripts": {
     "dev": "webpack-dev-server"
   },
@@ -18,7 +17,6 @@
     "babel-core": "^6.26.0",
     "babel-loader": "^7.1.2",
     "babel-preset-es2016": "^6.24.1",
-    "html-webpack-plugin": "^2.30.1",
     "jcdt": "^1.0.2",
     "ts-loader": "^3.4.0",
     "typescript": "^2.7.1",
