@@ -5,7 +5,7 @@ Written by a java programmer who got used to declarative HTTP client.<br/>
 
 ~~The goal is provide a simple, concise http client in all javascript/typescript environment, ( es6 environment, actually )~~ ( not yet! )
 
-> Because `babel-plugin-transform-decorators-legacy` not support parameter decorator yet, so that RetrofitJs only working on TypeScript environment for now.
+<strong>Because `babel-plugin-transform-decorators-legacy` not support parameter decorator yet, so that RetrofitJs only working on TypeScript environment for now.</strong>
 
 let us focus on declare own http interface rather than http details, just like Retrofit did, write less, do more.
 
@@ -23,7 +23,7 @@ because it depend on `Proxy` object( es6 ) and `Decorator` feature( es7 ).
 
 In other word, RetrofitJs can be working on any environment who support es6 in native.
 
-About `Proxy` object, I can not find any polyFill to supported. But for the `Decorator`, you can use it by something babel support like `transform-decorators-legacy`.
+About `Proxy` object, I can not find any polyFill to supported. ~~But for the `Decorator`, you can use it by something babel support like `babel-plugin-transform-decorators-legacy`.~~
 
 ## Installing
 Using npm: 
