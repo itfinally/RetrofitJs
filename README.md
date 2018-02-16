@@ -3,7 +3,10 @@
 Axios based declarative HTTP client for the browser and node.js.<br/>
 Written by a java programmer who got used to declarative HTTP client.<br/>
 
-The goal is provide a simple, concise http client in all javascript/typescript environment, ( es6 environment, actually )
+~~The goal is provide a simple, concise http client in all javascript/typescript environment, ( es6 environment, actually )~~ ( not yet! )
+
+> Because `babel-plugin-transform-decorators-legacy` not support parameter decorator yet, so that RetrofitJs only working on TypeScript environment for now.
+
 let us focus on declare own http interface rather than http details, just like Retrofit did, write less, do more.
 
 In the last, thank for all peoples who written or update [Axios](https://github.com/axios/axios) ( javascript http client ) and [Retrofit](https://github.com/square/retrofit) ( java http client ) very much, those are wonderful projects, it teach me a lot.
