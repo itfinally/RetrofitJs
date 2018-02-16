@@ -3,8 +3,8 @@ const path = require( "path" ),
   HtmlWebpackPlugin = require( "html-webpack-plugin" );
 
 module.exports = {
-  // target: "node",
-  entry: "./index.ts",
+  target: "node",
+  entry: "./test/te2.js",
   devtool: "inline-source-map",
   output: {
     path: path.resolve( __dirname, "target" ),

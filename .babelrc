@@ -1,5 +1,8 @@
 {
   "presets": [
-    "es2016"
+    "env"
+  ],
+  "plugins": [
+    "transform-decorators-legacy"
   ]
 }

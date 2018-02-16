@@ -111,5 +111,5 @@ export class RetrofitResponse<T = any> implements ResponseInterface<T> {
 }
 
 export interface RetrofitPromise<T = any> extends Promise<ResponseInterface<T>> {
-  cancel( message: string ): void;
+  cancel( message?: string ): void;
 }

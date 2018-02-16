@@ -37,3 +37,9 @@ export let FieldMap: Function;
 export let Config: Function;
 
 export function ResponseBody( name?: ResponseType ): Function;
+
+export let MultiPart: Function;
+
+export let PartMap: Function;
+
+export function Part( name: string ): Function;

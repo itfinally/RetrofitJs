@@ -1,24 +1,16 @@
 import { MethodMetadata } from "./decorators";
 import {
-  Map, HashSet, Set, CoreUtils, StringUtils, IllegalArgumentException, HashMap,
-  IndexOutOfBoundsException
+  CoreUtils, HashMap, HashSet, IllegalArgumentException, IllegalStateException, IndexOutOfBoundsException, Map,
+  Set, StringUtils
 } from "jcdt";
-import { RequestInterFace, RetrofitRequest } from "./core/define";
+import { RequestInterFace, RequestMethod, ResponseType, RetrofitRequest } from "./core/define";
 import {
-  BodyNotMatchException, HeaderNotMatchException, PathVariableNotMatchException,
-  QueryParamNotMatchException,
-  IllegalRequestException
+  BodyNotMatchException, HeaderNotMatchException, IllegalRequestException, PathVariableNotMatchException,
+  QueryParamNotMatchException
 } from "./core/exception";
 
+import * as FormData from "form-data";
 
-let isBrowser = false;
-try {
-  let testing = FormData;
-  isBrowser = true;
-
-} catch ( e ) {
-  isBrowser = false;
-}
 
 interface MetadataValidator {
   handler( metadata: MethodMetadata ): void;
@@ -36,11 +28,11 @@ class Validation {
   private noBodyOrFormInGetRequest(): MetadataValidator {
     return {
       handler( metadata: MethodMetadata ): void {
-        if ( "requestMethod" in metadata && metadata.requestMethod !== "get" ) {
+        if ( metadata.requestMethod && metadata.requestMethod !== "get" ) {
           return;
         }
 
-        if ( "requestBodyIndex" in metadata || "fieldMapper" in metadata || "fieldMaps" in metadata ) {
+        if ( "requestBodyIndex" in metadata || metadata.isMultiPart || metadata.isFormCommit ) {
           throw new IllegalRequestException( "There not allow request body or form with GET request." );
         }
       }
@@ -50,7 +42,7 @@ class Validation {
   private noBodyAndFormExistInSameRequest(): MetadataValidator {
     return {
       handler( metadata: MethodMetadata ): void {
-        if ( ( "fieldMapper" in metadata || "fieldMaps" in metadata ) && "requestBodyIndex" in metadata ) {
+        if ( ( metadata.isMultiPart || metadata.isFormCommit ) && "requestBodyIndex" in metadata ) {
           throw new IllegalRequestException( "Can not use body and form in same request." );
         }
       }
@@ -84,8 +76,8 @@ class Validation {
           indexFilter( <number>metadata.configIndex );
         }
 
-        [ "headers", "queryMaps", "fieldMaps" ].forEach( hashSetFilter );
-        [ "queryMapper", "fieldMapper", "headersMapper", "restfulMapper" ].forEach( hashMapFilter );
+        [ "headers", "queryMaps", "fieldMaps", "partMaps" ].forEach( hashSetFilter );
+        [ "queryMapper", "fieldMapper", "headersMapper", "restfulMapper", "partMapper" ].forEach( hashMapFilter );
       }
     };
   }
@@ -93,16 +85,19 @@ class Validation {
   private isResponseType(): MetadataValidator {
     let types: Set<string> = new HashSet<string>();
 
-    [ "arraybuffer", "blob", "document", "json", "text", "stream" ].forEach( key => types.add( key ) );
+    [ ResponseType.JSON, ResponseType.ARRAY_BUFFER, ResponseType.STREAM,
+      ResponseType.DOCUMENT, ResponseType.TEXT, ResponseType.BLOB
+
+    ].forEach( key => types.add( key ) );
 
     return {
       handler( metadata: MethodMetadata ): void {
-        if ( !( "responseType" in metadata ) ) {
+        if ( !metadata.responseType ) {
           return;
         }
 
         if ( !types.contains( metadata.responseType ) ) {
-          throw new IllegalRequestException( "There are not response type." );
+          throw new IllegalRequestException( "There are not support response type." );
         }
       }
     };
@@ -139,8 +134,8 @@ export class RequestBuilder {
     return {
       order: 0,
       handler( metadata: MethodMetadata, parameter: any[], request: RequestInterFace ): void {
-        let classPath = "classPath" in metadata ? metadata.classPath : "",
-          methodPath = "methodPath" in metadata ? metadata.methodPath : "";
+        let classPath = metadata.classPath ? metadata.classPath : "",
+          methodPath = metadata.methodPath ? metadata.methodPath : "";
 
         request.url = `${classPath}/${methodPath}`.replace( /\w(\/{2,})/g,
           ( match: string, key: string ): string => match.replace( key, "/" ) );
@@ -152,7 +147,7 @@ export class RequestBuilder {
     return {
       order: 0,
       handler( metadata: MethodMetadata, parameter: any[], request: RequestInterFace ): void {
-        request.method = "requestMethod" in metadata ? metadata.requestMethod : "get";
+        request.method = metadata.requestMethod ? metadata.requestMethod : RequestMethod.GET;
       }
     };
   }
@@ -161,19 +156,19 @@ export class RequestBuilder {
     return {
       order: 1,
       handler( metadata: MethodMetadata, parameter: any[], request: RequestInterFace ): void {
-        if ( StringUtils.isBlank( <string>request.url ) || !( "restfulMapper" in metadata ) ) {
+        if ( StringUtils.isBlank( <string>request.url ) || !metadata.restfulMapper ) {
           return;
         }
 
         let mapper = <Map<string, number>>metadata.restfulMapper;
         request.url = ( <string>request.url ).replace( /:([\w\-_]+)/g, ( match: string, key: string ): string => {
           if ( !mapper.containsKey( key ) ) {
-            throw new PathVariableNotMatchException( `The path variable '${key}' is not match.` );
+            throw new PathVariableNotMatchException( `The url ${request.url} variable @Path ${key} is not match.` );
           }
 
           let index = mapper.get( key );
           if ( index >= parameter.length ) {
-            throw new IndexOutOfBoundsException( `The url '${request.url}' path variable '${key}' is out of index.` );
+            throw new IndexOutOfBoundsException( `The url '${request.url}' variable @Path '${key}' is out of index.` );
           }
 
           return encodeURI( parameter[ index ] );
@@ -184,19 +179,19 @@ export class RequestBuilder {
 
   private queryPathHandler(): MetadataHandler {
     return {
-      order: 2,
+      order: 1,
       handler( metadata: MethodMetadata, parameter: any[], request: RequestInterFace ): void {
-        if ( StringUtils.isBlank( <string>request.url ) || !( "queryMapper" in metadata || "queryMaps" in metadata ) ) {
+        if ( StringUtils.isBlank( <string>request.url ) || !( metadata.queryMaps || metadata.queryMapper ) ) {
           return;
         }
 
         let mapper: { [key: string]: string } = Object.create( null ),
-          queryMaps: Set<number> = "queryMaps" in metadata ? <Set<number>>metadata.queryMaps : new HashSet(),
-          queryMapper: Map<string, number> = "queryMapper" in metadata ? <Map<string, number>>metadata.queryMapper : new HashMap();
+          queryMaps: Set<number> = metadata.queryMaps ? <Set<number>>metadata.queryMaps : new HashSet(),
+          queryMapper: Map<string, number> = metadata.queryMapper ? <Map<string, number>>metadata.queryMapper : new HashMap();
 
         for ( let entry of queryMapper.entrySet() ) {
           if ( entry.value >= parameter.length ) {
-            throw new IndexOutOfBoundsException( `The url '${request.url}' query param '${entry.key}' is out of index.` );
+            throw new IndexOutOfBoundsException( `The url '${request.url}' variable @Query '${entry.key}' is out of index.` );
           }
 
           mapper[ entry.key ] = parameter[ entry.value ];
@@ -204,11 +199,11 @@ export class RequestBuilder {
 
         for ( let index of queryMaps ) {
           if ( index >= parameter.length ) {
-            throw new IndexOutOfBoundsException( `The url '${request.url}' query param map is out of index.` );
+            throw new IndexOutOfBoundsException( `The url '${request.url}' variable @QueryMap is out of index.` );
           }
 
           if ( !CoreUtils.isSimpleObject( parameter[ index ] ) ) {
-            throw new QueryParamNotMatchException( "QueryMap require a object." );
+            throw new QueryParamNotMatchException( "@QueryMap require a object." );
           }
 
           let localMapper = parameter[ index ];
@@ -229,19 +224,19 @@ export class RequestBuilder {
 
   private headerHandler(): MetadataHandler {
     return {
-      order: 3,
+      order: 2,
       handler( metadata: MethodMetadata, parameter: any[], request: RequestInterFace ): void {
-        if ( !( "headers" in metadata || "headersMapper" in metadata ) ) {
+        if ( !( metadata.headers || metadata.headersMapper ) ) {
           return;
         }
 
         let mapper: { [key: string]: string } = Object.create( null ),
-          headers: Set<string> = "headers" in metadata ? <Set<string>>metadata.headers : new HashSet(),
-          headersMapper: Map<string, number> = "headersMapper" in metadata ? <Map<string, number>>metadata.headersMapper : new HashMap();
+          headers: Set<string> = metadata.headers ? <Set<string>>metadata.headers : new HashSet(),
+          headersMapper: Map<string, number> = metadata.headersMapper ? <Map<string, number>>metadata.headersMapper : new HashMap();
 
         for ( let entry of headersMapper.entrySet() ) {
           if ( entry.value >= parameter.length ) {
-            throw new IndexOutOfBoundsException( `The url '${request.url}' query param '${entry.key}' is out of index.` );
+            throw new IndexOutOfBoundsException( `The url '${request.url}' variable @Header '${entry.key}' is out of index.` );
           }
 
           mapper[ entry.key ] = parameter[ entry.value ];
@@ -251,7 +246,7 @@ export class RequestBuilder {
           let [ key, value ] = header.trim().split( ":" );
 
           if ( StringUtils.isBlank( key ) || StringUtils.isBlank( value ) ) {
-            throw new HeaderNotMatchException( `Header require key-value entry.` );
+            throw new HeaderNotMatchException( `@Header require key-value entry.` );
           }
 
           mapper[ key ] = value.trim();
@@ -262,24 +257,81 @@ export class RequestBuilder {
     };
   }
 
-  private fieldBodyHandler(): MetadataHandler {
+  private multiPartHandler(): MetadataHandler {
     return {
       order: 4,
       handler( metadata: MethodMetadata, parameter: any[], request: RequestInterFace ): void {
-        if ( StringUtils.isBlank( <string>request.url )
-          || ( !( "fieldMapper" in metadata ) && !( "fieldMaps" in metadata ) )
-          || "requestBodyIndex" in metadata ) {
-
+        if ( !metadata.isMultiPart ) {
           return;
         }
 
         let mapper: { [key: string]: string } = Object.create( null ),
-          fieldMaps: Set<number> = "fieldMaps" in metadata ? <Set<number>>metadata.fieldMaps : new HashSet(),
-          fieldMapper: Map<string, number> = "fieldMapper" in metadata ? <Map<string, number>>metadata.fieldMapper : new HashMap();
+          partMaps: Set<number> = metadata.partMaps ? <Set<number>>metadata.partMaps : new HashSet(),
+          partMapper: Map<string, number> = metadata.partMapper ? <Map<string, number>>metadata.partMapper : new HashMap();
+
+        for ( let entry of partMapper.entrySet() ) {
+          if ( entry.value >= parameter.length ) {
+            throw new IndexOutOfBoundsException( `The url '${request.url}' variable @Part '${entry.key}' is out of index.` );
+          }
+
+          mapper[ entry.key ] = parameter[ entry.value ];
+        }
+
+        for ( let index of partMaps ) {
+          if ( index >= parameter.length ) {
+            throw new IndexOutOfBoundsException( `The url '${request.url}' variable @PartMap is out of index.` );
+          }
+
+          if ( !CoreUtils.isSimpleObject( parameter[ index ] ) ) {
+            throw new BodyNotMatchException( "@PartMap require a object." );
+          }
+
+          let localMapper = parameter[ index ];
+          Object.keys( localMapper ).forEach( name => mapper[ name ] = localMapper[ name ] );
+        }
+
+        if ( !( "data" in request ) ) {
+          request.data = new FormData();
+        }
+
+        if ( !( request.data instanceof FormData ) ) {
+          throw new IllegalStateException( "Request Body is not Empty." );
+        }
+
+        let form: FormData = request.data,
+          isNode = typeof( window ) === "undefined";
+
+        Object.keys( mapper ).forEach( key => {
+          if ( isNode && Buffer.isBuffer( mapper[ key ] ) ) {
+            throw new IllegalArgumentException( "You can use 'fs' to create read stream and upload it if you want to upload a file." );
+          }
+
+          form.append( key, mapper[ key ] );
+        } );
+
+        // only use it in node
+        if ( isNode ) {
+          request.headers[ "Content-Type" ] = `multipart/form-data; boundary=${form.getBoundary()}`;
+        }
+      }
+    };
+  }
+
+  private fieldBodyHandler(): MetadataHandler {
+    return {
+      order: 4,
+      handler( metadata: MethodMetadata, parameter: any[], request: RequestInterFace ): void {
+        if ( !metadata.isFormCommit ) {
+          return;
+        }
+
+        let mapper: { [key: string]: string } = Object.create( null ),
+          fieldMaps: Set<number> = metadata.fieldMaps ? <Set<number>>metadata.fieldMaps : new HashSet(),
+          fieldMapper: Map<string, number> = metadata.fieldMapper ? <Map<string, number>>metadata.fieldMapper : new HashMap();
 
         for ( let entry of fieldMapper.entrySet() ) {
           if ( entry.value >= parameter.length ) {
-            throw new IndexOutOfBoundsException( `The form body field of '${entry.key}' is out of index.` );
+            throw new IndexOutOfBoundsException( `The url '${request.url}' variable @Field '${entry.key}' is out of index.` );
           }
 
           mapper[ entry.key ] = parameter[ entry.value ];
@@ -287,11 +339,11 @@ export class RequestBuilder {
 
         for ( let index of fieldMaps ) {
           if ( index >= parameter.length ) {
-            throw new IndexOutOfBoundsException( `The url '${request.url}' field map is out of index.` );
+            throw new IndexOutOfBoundsException( `The url '${request.url}' variable @FieldMap is out of index.` );
           }
 
           if ( !CoreUtils.isSimpleObject( parameter[ index ] ) ) {
-            throw new BodyNotMatchException( "FieldMap require a object." );
+            throw new BodyNotMatchException( "@FieldMap require a object." );
           }
 
           let localMapper = parameter[ index ];
@@ -313,12 +365,12 @@ export class RequestBuilder {
         }
 
         if ( <number>metadata.requestBodyIndex >= parameter.length ) {
-          throw new IndexOutOfBoundsException( `The url '${request.url}' body is out of index.` );
+          throw new IndexOutOfBoundsException( `The url '${request.url}' variable @Body is out of index.` );
         }
 
         let body = parameter[ <number>metadata.requestBodyIndex ];
         if ( !CoreUtils.isSimpleObject( body ) ) {
-          throw new BodyNotMatchException( "Body require a object." );
+          throw new BodyNotMatchException( "@Body require a object." );
         }
 
         request.data = body;
@@ -331,7 +383,7 @@ export class RequestBuilder {
     return {
       order: 4,
       handler( metadata: MethodMetadata, parameter: any[], request: RequestInterFace ): void {
-        if ( !( "responseType" in metadata ) ) {
+        if ( !metadata.responseType ) {
           return;
         }
 
@@ -342,18 +394,18 @@ export class RequestBuilder {
 
   private configMerge(): MetadataHandler {
     return {
-      order: 10,
+      order: 9999,
       handler( metadata: MethodMetadata, parameter: any[], request: RequestInterFace ): void {
         if ( !( "configIndex" in metadata ) ) {
           return;
         }
 
         if ( <number>metadata.configIndex >= parameter.length ) {
-          throw new IndexOutOfBoundsException( `The url '${request.url}' body is out of index.` );
+          throw new IndexOutOfBoundsException( `The url '${request.url}' variable @Config is out of index.` );
         }
 
         let config = parameter[ <number>metadata.configIndex ];
-        if ( CoreUtils.isSimpleObject( config ) ) {
+        if ( !CoreUtils.isSimpleObject( config ) ) {
           throw new IllegalArgumentException( "Config require a object." );
         }
 

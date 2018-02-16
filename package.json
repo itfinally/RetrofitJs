@@ -13,13 +13,21 @@
   "author": "itfinally",
   "license": "MIT",
   "devDependencies": {
-    "axios": "^0.17.1",
+    "@types/form-data": "^2.2.1",
+    "@types/node": "^9.4.6",
     "babel-core": "^6.26.0",
     "babel-loader": "^7.1.2",
-    "babel-preset-es2016": "^6.24.1",
-    "jcdt": "^1.0.2",
+    "babel-plugin-transform-decorators-legacy": "^1.3.4",
+    "babel-polyfill": "^6.26.0",
+    "babel-preset-env": "^1.6.1",
+    "html-webpack-plugin": "^2.30.1",
     "ts-loader": "^3.4.0",
     "typescript": "^2.7.1",
     "webpack": "^3.10.0"
+  },
+  "dependencies": {
+    "axios": "^0.17.1",
+    "form-data": "^2.3.2",
+    "jcdt": "^1.0.2"
   }
 }

@@ -5,7 +5,7 @@ import { RequestBuilder } from "./factory";
 import { Proxy, ProxyHandler } from "./core/proxy";
 import { IOException, RequestCancelException, RequestTimeoutException } from "./core/exception";
 import { Decorators, MethodMetadata } from "./decorators";
-import { RequestInterFace, RetrofitConfig, RetrofitPromise, } from "./core/define";
+import { RequestInterFace, RetrofitConfig, RetrofitPromise } from "./core/define";
 import { Interceptor, InterceptorChainActor, ApplicationInterceptorChainActor } from "./core/interceptors";
 import { LoggerInterceptor, RealCall } from "./functions";
 
@@ -29,6 +29,8 @@ module Proxies {
   // Obvious, is cancel by user.
   handlers.add( ( request, reason ) => !( "code" in reason ) && request.isCancel() ? new RequestCancelException( reason.message ) : <any>null );
 
+  // ECONNREFUSED 比如目标端口没有开放
+  // ECONNRESET   比如服务端主动断开
   // Two situation:
   // 1. ETIMEDOUT is server
   // When user set 'timeout' option, and request already timeout, use this exception.

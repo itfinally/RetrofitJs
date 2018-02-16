@@ -1,6 +1,8 @@
 import { ResponseInterface, RetrofitConfig, RetrofitResponse } from "./core/define";
-import { AxiosInstance } from "axios";
 import { Chain, Interceptor } from "./core/interceptors";
+import { AxiosInstance } from "axios";
+import * as FormData from "form-data";
+import { CoreUtils } from "jcdt";
 
 export class RealCall implements Interceptor {
   public order: number = 0;
@@ -378,8 +380,14 @@ export class LoggerInterceptor implements Interceptor {
 
     requestDetails[ "url" ] = `${request.baseURL ? request.baseURL + "/" + request.url : request.url}`;
     requestDetails[ "method" ] = `${request.method}`;
-    requestDetails[ "data" ] = request.data ? request.data : Object.create( null );
     requestDetails[ "headers" ] = request.headers ? request.headers : Object.create( null );
+
+    if ( CoreUtils.isString( request.data ) ) {
+      requestDetails[ "data" ] = request.data;
+
+    } else if ( request.data instanceof FormData || !CoreUtils.isNone( request.data ) ) {
+      requestDetails[ "data" ] = "[Object]";
+    }
 
     let
       getTime = () => ( Date.now || new Date().getTime )(),
@@ -395,7 +403,7 @@ export class LoggerInterceptor implements Interceptor {
     console.log( "\n" );
     console.log( "---- request details ----" );
     console.log( requestDetails );
-    console.log( "---- response log ----" );
+    console.log( "\n---- response log ----" );
     console.log( responseDetails );
     console.log( "\n" );
 

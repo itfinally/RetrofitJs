@@ -1,21 +1,22 @@
-import {
-  HashMap, Map, CoreUtils, HashSet,
-  Set, IllegalStateException, IllegalArgumentException
-} from "jcdt";
+import { CoreUtils, HashMap, HashSet, IllegalArgumentException, IllegalStateException, Map, Set } from "jcdt";
 import { RequestMethod, ResponseType } from "./core/define";
 
 export interface MethodMetadata {
   classPath?: string;
   methodPath?: string;
   configIndex?: number;
+  isMultiPart?: boolean;
   isFormCommit?: boolean;
   requestBodyIndex?: number;
   responseType?: ResponseType;
   requestMethod?: RequestMethod;
 
   headers?: Set<string>;
+  partMaps?: Set<number>;
   queryMaps?: Set<number>;
   fieldMaps?: Set<number>;
+
+  partMapper?: Map<string, number>;
   queryMapper?: Map<string, number>;
   fieldMapper?: Map<string, number>;
   headersMapper?: Map<string, number>;
@@ -23,13 +24,17 @@ export interface MethodMetadata {
 }
 
 let metadataMapper: Map<string, MethodMetadata> = new HashMap(),
-  classMapper: Map<Function, string> = new HashMap(),
-  methodMapper: Map<string, string> = new HashMap(),
   once: Set<string> = new HashSet();
 
 class CollectorUtils {
+  private static classMapper: Map<Function, string> = new HashMap();
+  private static methodMapper: Map<string, string> = new HashMap();
+
   public static getOrBuildKey( constructor: Function, method: string = "none" ) {
-    let part1: string = classMapper.get( constructor ),
+    let classMapper = CollectorUtils.classMapper,
+      methodMapper = CollectorUtils.methodMapper,
+
+      part1: string = classMapper.get( constructor ),
       part2: string = methodMapper.get( method ),
       tempUUID: string = CoreUtils.uuid().replace( /-/g, "" );
 
@@ -209,11 +214,9 @@ export function PATCH( path: string ): Function {
   return HTTP( path, RequestMethod.PATCH );
 }
 
-export let Body: Function = ( () => {
-  return basicParameterAnnotation( ( metadata, parameterIndex ) => {
-    metadata.requestBodyIndex = parameterIndex;
-  } );
-} )();
+export let Body: Function = basicParameterAnnotation( ( metadata, parameterIndex ) => {
+  metadata.requestBodyIndex = parameterIndex;
+} );
 
 export function Path( name: string ): Function {
   if ( !CoreUtils.isString( name ) ) {
@@ -243,15 +246,13 @@ export function Query( name: string ): Function {
   } );
 }
 
-export let QueryMap: Function = ( () => {
-  return basicParameterAnnotation( ( metadata, parameterIndex ) => {
-    if ( CoreUtils.isNone( metadata.queryMaps ) ) {
-      metadata.queryMaps = new HashSet();
-    }
+export let QueryMap: Function = basicParameterAnnotation( ( metadata, parameterIndex ) => {
+  if ( CoreUtils.isNone( metadata.queryMaps ) ) {
+    metadata.queryMaps = new HashSet();
+  }
 
-    ( <Set<number>>metadata.queryMaps ).add( parameterIndex );
-  } );
-} )();
+  ( <Set<number>>metadata.queryMaps ).add( parameterIndex );
+} );
 
 export function Headers( headers: string | string[] ): Function {
   if ( CoreUtils.isNone( headers ) ) {
@@ -302,7 +303,7 @@ export function Header( name: string ): Function {
   } );
 }
 
-export let FormUrlEncoded: Function = ( () => basicMethodAnnotation( "form", metadata => metadata.isFormCommit = true ) )();
+export let FormUrlEncoded: Function = basicMethodAnnotation( "form", metadata => metadata.isFormCommit = true );
 
 export function Field( name: string ): Function {
   if ( !CoreUtils.isString( name ) ) {
@@ -318,17 +319,15 @@ export function Field( name: string ): Function {
   } );
 }
 
-export let FieldMap: Function = ( () => {
-  return basicParameterAnnotation( ( metadata, parameterIndex ) => {
-    if ( CoreUtils.isNone( metadata.fieldMaps ) ) {
-      metadata.fieldMaps = new HashSet();
-    }
+export let FieldMap: Function = basicParameterAnnotation( ( metadata, parameterIndex ) => {
+  if ( CoreUtils.isNone( metadata.fieldMaps ) ) {
+    metadata.fieldMaps = new HashSet();
+  }
 
-    ( <Set<number>>metadata.fieldMaps ).add( parameterIndex );
-  } );
-} )();
+  ( <Set<number>>metadata.fieldMaps ).add( parameterIndex );
+} );
 
-export let Config: Function = ( () => basicParameterAnnotation( ( metadata, parameterIndex ) => metadata.configIndex = parameterIndex ) )();
+export let Config: Function = basicParameterAnnotation( ( metadata, parameterIndex ) => metadata.configIndex = parameterIndex );
 
 export function ResponseBody( name: ResponseType = ResponseType.JSON ): Function {
   if ( !CoreUtils.isString( name ) ) {
@@ -336,4 +335,28 @@ export function ResponseBody( name: ResponseType = ResponseType.JSON ): Function
   }
 
   return basicMethodAnnotation( "responseBody", metadata => metadata.responseType = name );
+}
+
+export let MultiPart: Function = basicMethodAnnotation( "multipart", metadata => metadata.isMultiPart = true );
+
+export let PartMap: Function = basicParameterAnnotation( ( metadata, parameterIndex ) => {
+  if ( !( "partMaps" in metadata ) ) {
+    metadata.partMaps = new HashSet();
+  }
+
+  ( <Set<number>>metadata.partMaps ).add( parameterIndex );
+} );
+
+export function Part( name: string ): Function {
+  if ( !CoreUtils.isString( name ) ) {
+    throw new IllegalArgumentException( "Require field name." );
+  }
+
+  return basicParameterAnnotation( ( metadata, parameterIndex ) => {
+    if ( !( "partMapper" in metadata ) ) {
+      metadata.partMapper = new HashMap();
+    }
+
+    ( <Map<string, number>>metadata.partMapper ).put( name, parameterIndex );
+  } );
 }
