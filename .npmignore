@@ -1,9 +1,11 @@
 .git
 .idea
+.babelrc
 .DS_Store
 .gitignore
 .npmignore
 
+test
 target
 tsconfig.json
 npm-debug.log

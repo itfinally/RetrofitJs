@@ -4,6 +4,14 @@ export class RequestCancelException extends Exception {
   public constructor( message?: string );
 }
 
+export class ConnectException extends Exception {
+  public constructor( message?: string );
+}
+
+export class SocketException extends Exception {
+  public constructor( message?: string );
+}
+
 export class RequestTimeoutException extends Exception {
   public constructor( message?: string );
 }

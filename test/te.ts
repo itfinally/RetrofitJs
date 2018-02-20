@@ -3,11 +3,18 @@ import {
   RetrofitPromise
 } from "..";
 import * as fs from "fs";
+import { Exception } from "jcdt";
 
 let retrofit = Retrofit.getBuilder()
   .setConfig<RetrofitConfig>( {
     baseURL: "http://192.168.1.113:8080",
+    timeout: 3000,
     debug: true
+  } )
+  .setErrorHandler( {
+    handler( realReason: any, exception: Exception ): void {
+      console.log(arguments);
+    }
   } )
   .build();
 

@@ -1,6 +1,5 @@
-import { IllegalArgumentException, NullPointException, Set, CoreUtils, HashSet, IllegalStateException } from "jcdt";
+import { CoreUtils, HashSet, IllegalArgumentException, IllegalStateException, NullPointException, Set } from "jcdt";
 import { RequestInterFace, ResponseInterface, RetrofitConfig, RetrofitRequest } from "./define";
-import { RequestCancelException } from "./exception";
 
 export interface Chain {
   proceed( request: RequestInterFace ): Promise<ResponseInterface>;
@@ -48,7 +47,7 @@ export abstract class InterceptorChainActor {
           this.localRequest = request;
 
           if ( request.isCancel() ) {
-            return Promise.reject( new RequestCancelException( request.getCancelMessage() ) );
+            return Promise.reject( { "message": request.getCancelMessage() } );
           }
 
           let response: Promise<ResponseInterface> = this.index < this.length

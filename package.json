@@ -1,6 +1,6 @@
 {
   "name": "retrofitjs",
-  "version": "0.2.0",
+  "version": "0.3.3",
   "description": "Axios based declarative HTTP client for the browser and node.js",
   "scripts": {
     "dev": "webpack-dev-server"
@@ -8,7 +8,7 @@
   "keywords": [
     "javascript",
     "typescript",
-    "http"
+    "http-client"
   ],
   "author": "itfinally",
   "license": "MIT",
@@ -28,6 +28,6 @@
   "dependencies": {
     "axios": "^0.17.1",
     "form-data": "^2.3.2",
-    "jcdt": "^1.0.2"
+    "jcdt": "^1.0.3"
   }
 }

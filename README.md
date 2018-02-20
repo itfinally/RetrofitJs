@@ -7,7 +7,9 @@ Written by a java programmer who got used to declarative HTTP client.<br/>
 
 <strong>Because `babel-plugin-transform-decorators-legacy` not support parameter decorator yet, so that RetrofitJs only working on TypeScript environment for now.</strong>
 
-let us focus on declare own http interface rather than http details, just like Retrofit did, write less, do more.
+> You can decorate the whole class, as well as declarations of fields, getters, setters and methods. Arguments and function declarations cannot be decorated. -- from [proposal-decorators](https://github.com/tc39/proposal-decorators)
+
+Let us focus on declare own http interface rather than http details, just like Retrofit did, write less, do more.
 
 In the last, thank for all peoples who written or update [Axios](https://github.com/axios/axios) ( javascript http client ) and [Retrofit](https://github.com/square/retrofit) ( java http client ) very much, those are wonderful projects, it teach me a lot.
 
@@ -19,7 +21,7 @@ In the last, thank for all peoples who written or update [Axios](https://github.
 
 ## Support
 This program can't working on IE8/9/10/11 and other environment( usually browser ) who not support es6 in native,
-because it depend on `Proxy` object( es6 ) and `Decorator` feature( es7 ).
+because it depend on `Proxy` object( es6 ) and `Decorator` feature( stage 2 ).
 
 In other word, RetrofitJs can be working on any environment who support es6 in native.
 
@@ -65,6 +67,9 @@ testingClient.demo1( "itfinally", Date.now() ).then( response => {
 } ).catch( reason => {
 	// any code
 } );
+
+// And you can also get axios instance.
+let axios: AxiosInstance = client.getEngine();
 ```
 
 ## All decorators
@@ -173,6 +178,16 @@ class MyErrorHandler implement ErrorHandler {
 
 `realReason` is the parameter given by axios, and `exception` is the instance of `Exception`, you can easily to Uniform process all exception.
 
+This is all exception: 
+
+exception						|	description
+:--:								|	:--:
+RequestCancelException		|  User Cancellation
+ConnectException				|  ECONNREFUSED signal activated
+SocketException				|  ECONNRESET signal activated
+RequestTimeoutException	|  ECONNABORTED or ETIMEDOUT signal activated
+IOException						|  the rest of unknown situation
+
 Although error handler can be catch all exception, but it doesn't mean `Promise.catch` will not be active. In fact, it is necessary for the reason at terminate normal process when exception has been throws.
 
 ```typescript
@@ -235,7 +250,7 @@ public demo1<T>( @Body myBody: object ): RetrofitPromise<T> & void {
 }
 ```
 
-`@Body` can not used with any `@Field` or `@FieldMap`, because there is one body in single request. Also `@Body` can not used more than one in same method sign.
+`@Body` can not used with `@FormUrlEncoded` or `@MultiPart`, because there is one body in single request. Also `@Body` can not used more than one in same method sign.
 
 ```typescript
 // It is wrong!
@@ -245,7 +260,7 @@ public demo1<T>( @Body myBody: object, @Body otherBody: object ): RetrofitPromis
 
 Like the above case, parameter `myBody` will be ignore.
 
-### Domain Config
+### Dynamic Config
 If you want to override config, use `@Config` to decorate parameter.
 
 ```typescript
@@ -255,7 +270,7 @@ public demo1<T>( @Config config: RetrofitRequest ): RetrofitPromise<T> & void {
 
 It will be override decorator setting( but not including the global config ) by the field who parameter config contain.
 
-<strong>The domain config is only effective in request, but not to interceptor config, because interceptor initializing when you called `Retrofit.getBuilder().build()` and only initialize once.</strong>
+<strong>The dynamic config is only effective in request, but not to interceptor config, because interceptor initializing when you called `Retrofit.getBuilder().build()` and only initialize once.</strong>
 
 ### File upload 
 You can easily to upload file with RetrofitJs, as this follows:
@@ -290,7 +305,7 @@ Like form submit, The `@Part` and `@PartMap` also only effective when method has
 In last, Do not use `Buffer` object as parameter, I try to use the buffer object to upload, but all failed because buffer object has only data but not any description such as filename, filetype.
 
 ### Stream download
-In Browser, There is no way to download file by Ajax because Ajax always responding with string data, but you can use iframe tag to active browser download.
+In Browser, There is no way to download file by Ajax because Ajax always responding with string data, but you can use tag iframe to active browser download.
 
 But you can download file on node, as this follows:
 

@@ -3,6 +3,5 @@
 .DS_store
 
 dist
-test
 target
 node_modules

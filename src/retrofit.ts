@@ -1,12 +1,15 @@
 import Axios, { AxiosInstance } from "axios";
-import { CoreUtils, HashMap, Map, IllegalStateException, Exception, ArrayList, List } from "jcdt";
+import { ArrayList, CoreUtils, Exception, HashMap, IllegalStateException, List, Map } from "jcdt";
 
 import { RequestBuilder } from "./factory";
 import { Proxy, ProxyHandler } from "./core/proxy";
-import { IOException, RequestCancelException, RequestTimeoutException } from "./core/exception";
+import {
+  ConnectException, IOException, RequestCancelException, RequestTimeoutException,
+  SocketException
+} from "./core/exception";
 import { Decorators, MethodMetadata } from "./decorators";
 import { RequestInterFace, RetrofitConfig, RetrofitPromise } from "./core/define";
-import { Interceptor, InterceptorChainActor, ApplicationInterceptorChainActor } from "./core/interceptors";
+import { ApplicationInterceptorChainActor, Interceptor, InterceptorChainActor } from "./core/interceptors";
 import { LoggerInterceptor, RealCall } from "./functions";
 
 interface RequestProxiesConfig {
@@ -26,14 +29,9 @@ module Proxies {
       return null === exception ? new IOException( reason.message ) : exception;
     };
 
-  // Obvious, is cancel by user.
   handlers.add( ( request, reason ) => !( "code" in reason ) && request.isCancel() ? new RequestCancelException( reason.message ) : <any>null );
-
-  // ECONNREFUSED 比如目标端口没有开放
-  // ECONNRESET   比如服务端主动断开
-  // Two situation:
-  // 1. ETIMEDOUT is server
-  // When user set 'timeout' option, and request already timeout, use this exception.
+  handlers.add( ( _, reason ) => "code" in reason && "ECONNREFUSED" === reason.code ? new ConnectException( reason.message ) : <any>null );
+  handlers.add( ( _, reason ) => "code" in reason && "ECONNRESET" === reason.code ? new SocketException( reason.message ) : <any>null );
   handlers.add( ( _, reason ) => "code" in reason && "ECONNABORTED ETIMEDOUT".indexOf( reason.code ) >= 0 ? new RequestTimeoutException( reason.message ) : <any>null );
 
   export class RequestProxies<T = any> extends ProxyHandler<T> {
