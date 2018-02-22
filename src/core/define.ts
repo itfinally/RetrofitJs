@@ -24,6 +24,10 @@ export enum RequestMethod {
   PATCH = "patch"
 }
 
+export interface RetryCondition {
+  handler( request: RequestInterFace, reason: any ): boolean;
+}
+
 export interface RetrofitConfig {
   baseURL?: string;
   transformRequest?: AxiosTransformer | AxiosTransformer[];
@@ -44,9 +48,9 @@ export interface RetrofitConfig {
   proxy?: AxiosProxyConfig;
   paramsSerializer?: ( params: any ) => string;
 
-  // retryCondition?: ( reason: any ) => boolean;
+  retryCondition?: RetryCondition;
+  maxTry?: number;
   // allowCache?: boolean;
-  // maxTryTime?: number;
   debug?: boolean;
 }
 

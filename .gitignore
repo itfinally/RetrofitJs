@@ -5,3 +5,7 @@
 dist
 target
 node_modules
+
+*.map
+src/**/*.js
+!src/core/proxy.js

@@ -1,5 +1,8 @@
 import Axios, { AxiosInstance } from "axios";
-import { ArrayList, CoreUtils, Exception, HashMap, IllegalStateException, List, Map } from "jcdt";
+import {
+  ArrayList, Assert, CoreUtils, Exception, HashMap, IllegalArgumentException, IllegalStateException, List,
+  Map
+} from "jcdt";
 
 import { RequestBuilder } from "./factory";
 import { Proxy, ProxyHandler } from "./core/proxy";
@@ -10,7 +13,7 @@ import {
 import { Decorators, MethodMetadata } from "./decorators";
 import { RequestInterFace, RetrofitConfig, RetrofitPromise } from "./core/define";
 import { ApplicationInterceptorChainActor, Interceptor, InterceptorChainActor } from "./core/interceptors";
-import { LoggerInterceptor, RealCall } from "./functions";
+import { LoggerInterceptor, RealCall, RetryRequestInterceptor } from "./functions";
 
 interface RequestProxiesConfig {
   config: RetrofitConfig;
@@ -95,7 +98,7 @@ module Proxies {
 interface RetrofitBuilder {
   config: RetrofitConfig;
   errorHandler: ErrorHandler;
-  interceptors: Interceptor[];
+  interceptors: Map<number, Interceptor>;
 }
 
 export interface ErrorHandler {
@@ -119,16 +122,18 @@ export interface RetrofitBuilderFactory {
 }
 
 export class Retrofit {
-  private proxiesMap: Map<object, ProxyHandler<any>> = new HashMap();
+  private static interceptors: Map<number, Interceptor> = new HashMap( 256 );
+
+  private proxiesMap: Map<object, ProxyHandler<any>> = new HashMap( 16 );
   private interceptorActor: InterceptorChainActor;
   private errorHandler: ErrorHandler;
   private config: RetrofitConfig;
   private engine: AxiosInstance;
 
   private static Builder = class {
+    private interceptors: Map<number, Interceptor> = new HashMap();
     private config: RetrofitConfig = Object.create( null );
     private errorHandler: ErrorHandler = <any>null;
-    private interceptors: Interceptor[] = [];
 
     public setConfig<T extends RetrofitConfig = RetrofitConfig>( config: T ): this {
       this.config = config;
@@ -149,25 +154,31 @@ export class Retrofit {
     }
 
     public addInterceptor( ...interceptors: Interceptor[] ): this {
-      this.interceptors.push( ...interceptors );
+      Assert.requireNotNull( interceptors, "Interceptors must not be null." );
+
+      let buf = this.interceptors;
+      interceptors.forEach( interceptor => {
+        if ( interceptor.order < 256 ) {
+          throw new IllegalStateException( "Numbers less than 256 ( not including 256 ) are reserved" );
+        }
+
+        buf.put( interceptor.order, interceptor );
+      } );
+
       return this;
     }
 
     public getInterceptors(): Interceptor[] {
-      return this.interceptors;
+      return this.interceptors.values().toArray();
     }
 
     public build(): Retrofit {
       let config = this.config;
 
-      // if ( !( "maxTryTime" in config ) || <number>config.maxTryTime < 0 ) {
-      //   config.maxTryTime = 3;
-      // }
-
       return new Retrofit( {
         config: this.config,
         errorHandler: this.errorHandler,
-        interceptors: this.interceptors.filter( item => item.order && <any>item.order <= 0 )
+        interceptors: this.interceptors
       } );
     }
   };
@@ -177,17 +188,30 @@ export class Retrofit {
 
     this.interceptorActor = new ApplicationInterceptorChainActor();
 
-    // interceptor init
-    configure.interceptors.forEach( interceptor => {
-      interceptor.init( this.config );
-      this.interceptorActor.addInterceptor( interceptor );
-    } );
-
     // add default interceptor
     this.engine = Axios.create( configure.config );
-    this.interceptorActor.addInterceptor( new RealCall( this.engine ) )
-      .addInterceptor( new LoggerInterceptor( "debug" in configure.config && <boolean>configure.config.debug ) );
-    // .addInterceptor( new CacheInterceptor( this.engine ) );
+
+    let actor = this.interceptorActor,
+      buf = Retrofit.interceptors,
+
+      realCall = new RealCall( this.engine ),
+      retries = new RetryRequestInterceptor(),
+      logger = new LoggerInterceptor( "debug" in configure.config && <boolean>configure.config.debug );
+
+    buf.put( realCall.order, realCall );
+    buf.put( retries.order, retries );
+    buf.put( logger.order, logger );
+
+    // merge all interceptor and initializing
+    buf.putAll( configure.interceptors );
+    buf.values().forEach( interceptor => {
+      interceptor.init( this.config );
+      actor.addInterceptor( interceptor );
+      return false;
+    } );
+
+    // clear up
+    buf.clear();
 
     this.errorHandler = !CoreUtils.isNone( configure.errorHandler ) ? configure.errorHandler : <any>null;
   }
@@ -198,6 +222,19 @@ export class Retrofit {
 
   public static getBuilder(): RetrofitBuilderFactory {
     return new Retrofit.Builder();
+  }
+
+  public static use( ...interceptors: Interceptor[] ): void {
+    Assert.requireNotNull( interceptors, "Interceptors must not be null." );
+
+    let buf = Retrofit.interceptors;
+    interceptors.forEach( interceptor => {
+      if ( interceptor.order < 0 ) {
+        throw new IllegalArgumentException( "Order field can not less than zero." );
+      }
+
+      buf.put( interceptor.order, interceptor );
+    } );
   }
 
   public create<T>( cls: object ): T {

@@ -32,9 +32,9 @@ export abstract class InterceptorChainActor {
 
     let that = this,
       chain: Chain = new class implements Chain {
-        private index: number = 0;
         private localRequest: RequestInterFace = <any>null;
-        private length: number = that.localInterceptors.length;
+
+        private stack: Interceptor[] = [];
         private interceptors: Interceptor[] = that.localInterceptors.slice();
 
         // this is a recursive-chain function
@@ -50,11 +50,27 @@ export abstract class InterceptorChainActor {
             return Promise.reject( { "message": request.getCancelMessage() } );
           }
 
-          let response: Promise<ResponseInterface> = this.index < this.length
-            ? this.interceptors[ this.index++ ].intercept( this )
-            : Promise.reject( new IllegalStateException( "No real call in this interceptor chain, request has been rejected." ) );
+          let currentCall = this.interceptors.shift();
+          if ( currentCall ) {
+            this.stack.push( currentCall );
+          }
 
-          this.index -= 1;
+          // It will be return in direct and ignore the rest of function calling stack if using Promise rather than await.
+          // You can see the old implements from github log
+          let response: Promise<ResponseInterface>;
+          if ( currentCall ) {
+            try {
+              response = Promise.resolve( await currentCall.intercept( this ) );
+
+            } catch ( e ) {
+              response = Promise.reject( e );
+            }
+
+          } else {
+            response = Promise.reject( new IllegalStateException( "No real call in this interceptor chain, request has been rejected." ) );
+          }
+
+          this.interceptors.unshift( <Interceptor>this.stack.pop() );
           return response;
         }
 

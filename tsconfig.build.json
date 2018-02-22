@@ -5,6 +5,7 @@
     "allowJs": true,
     "target": "es6",
     "sourceMap": true,
+    "outDir": "./dist",
     "module": "commonjs",
     "sourceRoot": "./src",
     "removeComments": true,
@@ -15,6 +16,8 @@
     "node_modules",
     "definition",
     "target",
+    "./*.js",
+    "test",
     "dist"
   ]
 }

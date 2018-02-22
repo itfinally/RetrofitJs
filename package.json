@@ -1,15 +1,20 @@
 {
   "name": "retrofitjs",
-  "version": "0.3.3",
+  "version": "0.3.6",
   "description": "Axios based declarative HTTP client for the browser and node.js",
   "scripts": {
     "dev": "webpack-dev-server"
   },
   "keywords": [
-    "javascript",
-    "typescript",
-    "http-client"
+    "http",
+    "ajax",
+    "promise",
+    "declarative"
   ],
+  "repository": {
+    "type": "github",
+    "url": "https://github.com/itfinally/RetrofitJs"
+  },
   "author": "itfinally",
   "license": "MIT",
   "devDependencies": {

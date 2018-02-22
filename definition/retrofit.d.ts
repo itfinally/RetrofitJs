@@ -1,7 +1,7 @@
-import { Interceptor, InterceptorChainActor } from "./core/interceptor";
-import { RetrofitConfig } from "./core/define";
 import { AxiosInstance } from "axios";
 import { Exception } from "jcdt";
+import { RetrofitConfig } from "./core/define";
+import { Interceptor, InterceptorChainActor } from "./core/interceptor";
 
 interface RetrofitBuilder {
   config: RetrofitConfig;
@@ -41,6 +41,8 @@ export class Retrofit {
   private static Builder: any;
 
   private constructor( configure: RetrofitBuilder );
+
+  public static use( ...interceptors: Interceptor[] ): void;
 
   public static getBuilder(): RetrofitBuilderFactory;
 

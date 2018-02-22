@@ -2,6 +2,7 @@ import {
   AxiosAdapter, AxiosBasicCredentials, AxiosProxyConfig, AxiosRequestConfig, AxiosResponse,
   AxiosTransformer, CancelToken, CancelTokenSource
 } from "axios";
+import { RetryCondition } from "../../src/core/define";
 
 export enum ResponseType {
   ARRAY_BUFFER = "arraybuffer",
@@ -20,6 +21,10 @@ export enum RequestMethod {
   POST = "post",
   PUT = "put",
   PATCH = "patch"
+}
+
+export interface RetryCondition {
+  handler( request: RequestInterFace, reason: any ): boolean;
 }
 
 export interface RetrofitConfig {
@@ -42,6 +47,8 @@ export interface RetrofitConfig {
   proxy?: AxiosProxyConfig;
   paramsSerializer?: ( params: any ) => string;
 
+  retryCondition?: RetryCondition;
+  maxTry?: number;
   debug?: boolean;
 }
 

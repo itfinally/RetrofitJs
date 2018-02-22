@@ -1,8 +1,11 @@
-import { ResponseInterface, RetrofitConfig, RetrofitResponse } from "./core/define";
+import {
+  RequestInterFace, RequestMethod, ResponseInterface, RetrofitConfig, RetrofitResponse,
+  RetryCondition
+} from "./core/define";
 import { Chain, Interceptor } from "./core/interceptors";
 import { AxiosInstance } from "axios";
 import * as FormData from "form-data";
-import { CoreUtils } from "jcdt";
+import { CoreUtils, HashSet, IllegalStateException, Set } from "jcdt";
 
 export class RealCall implements Interceptor {
   public order: number = 0;
@@ -18,6 +21,93 @@ export class RealCall implements Interceptor {
   public intercept( chain: Chain ): Promise<ResponseInterface<any>> {
     return this.engine.request<any>( chain.request() )
       .then( response => Promise.resolve( new RetrofitResponse( chain.request(), response ) ) );
+  }
+}
+
+// IETF "Automatic Retries" --> https://tools.ietf.org/id/draft-nottingham-httpbis-retry-01.html
+// RFC7230 "Retrying Requests" --> https://tools.ietf.org/html/rfc7230#section-6.3.1
+export class RetryRequestInterceptor implements Interceptor {
+  public order: number = 1;
+  private timeout: number = 0;
+  private maxRetry: number = 0;
+  private retryCondition: RetryCondition = <any>null;
+
+  public init( config: RetrofitConfig ): void {
+    if ( "maxTry" in config ) {
+      this.maxRetry = <number>config.maxTry;
+    }
+
+    if ( "timeout" in config ) {
+      this.timeout = <number>config.timeout;
+    }
+
+    this.retryCondition = config.retryCondition || RetryRequestInterceptor.defaultRetryCondition();
+  }
+
+  // Only retry for request 'get'
+  public async intercept( chain: Chain ): Promise<ResponseInterface<any>> {
+    let request = chain.request();
+
+    if ( this.allowToRetry( request ) ) {
+      return chain.proceed( request );
+    }
+
+    let tryTime: number = 0,
+      exception: any = null,
+      sleepTime: number = 1000,
+      maxTry: number = this.maxRetry,
+      retryCondition: RetryCondition = this.retryCondition;
+
+    for ( ; tryTime < maxTry; tryTime += 1 ) {
+      exception = null;
+
+      try {
+        return await chain.proceed( request );
+
+      } catch ( e ) {
+        exception = e;
+      }
+
+      if ( !retryCondition.handler( request, exception ) ) {
+        throw exception;
+      }
+
+      // sleep random time.
+      await CoreUtils.sleep( sleepTime );
+      sleepTime += Math.floor( sleepTime * Number( Math.random().toFixed( 2 ) ) );
+    }
+
+    if ( exception ) {
+      return Promise.reject( exception );
+    }
+
+    throw new IllegalStateException( "Something wrong if this error has been throws." );
+  }
+
+  private allowToRetry( request: RequestInterFace ): boolean {
+    return [ RequestMethod.GET, RequestMethod.HEAD, RequestMethod.OPTIONS ].indexOf( <RequestMethod>request.method ) < 0
+      || ( !this.maxRetry || this.maxRetry <= 0 )
+      || ( !this.timeout || this.timeout <= 0 );
+  }
+
+  private static defaultRetryCondition(): RetryCondition {
+    let whiteList: Set<string> = new HashSet<string>();
+
+    [
+      "ETIMEDOUT",
+      "ECONNRESET",
+      "EADDRINUSE",
+      "ESOCKETTIMEDOUT",
+      "ECONNREFUSED",
+      "EPIPE"
+
+    ].forEach( name => whiteList.add( name ) );
+
+    return {
+      handler( request: RequestInterFace, reason: any ): boolean {
+        return "code" in reason && whiteList.contains( reason.code );
+      }
+    };
   }
 }
 
@@ -392,21 +482,45 @@ export class LoggerInterceptor implements Interceptor {
     let
       getTime = () => ( Date.now || new Date().getTime )(),
       start = getTime(),
+
+      response: ResponseInterface = <any>null,
+      exception: any = null;
+
+    try {
       response = await chain.proceed( chain.request() );
 
-    responseDetails[ "time" ] = `${( getTime() - start ) / 1000}s`;
+    } catch ( e ) {
+      exception = e;
+    }
 
-    let respHeaders = response.headers;
-    responseDetails[ "headers" ] = Object.create( null );
-    Object.keys( respHeaders ).forEach( name => responseDetails[ "headers" ][ name ] = respHeaders[ name ] );
+    responseDetails[ "time" ] = `${( getTime() - start ) / 1000}s`;
 
     console.log( "\n" );
     console.log( "---- request details ----" );
     console.log( requestDetails );
-    console.log( "\n---- response log ----" );
-    console.log( responseDetails );
-    console.log( "\n" );
 
-    return response;
+    if ( response ) {
+      let respHeaders = response.headers;
+      responseDetails[ "headers" ] = Object.create( null );
+      Object.keys( respHeaders ).forEach( name => responseDetails[ "headers" ][ name ] = respHeaders[ name ] );
+
+      console.log( "\n---- response log ----" );
+      console.log( responseDetails );
+      console.log( "\n" );
+
+      return Promise.resolve( response );
+    }
+
+    if ( exception ) {
+      responseDetails[ "error" ] = exception;
+
+      console.log( "\n---- error log ----" );
+      console.log( responseDetails );
+      console.log( "\n" );
+
+      return Promise.reject( exception );
+    }
+
+    throw new IllegalStateException( "Something wrong if this error has been throws." );
   }
 }

@@ -7,9 +7,12 @@ Written by a java programmer who got used to declarative HTTP client.<br/>
 
 <strong>Because `babel-plugin-transform-decorators-legacy` not support parameter decorator yet, so that RetrofitJs only working on TypeScript environment for now.</strong>
 
+Quote the proposal in here:
 > You can decorate the whole class, as well as declarations of fields, getters, setters and methods. Arguments and function declarations cannot be decorated. -- from [proposal-decorators](https://github.com/tc39/proposal-decorators)
 
-Let us focus on declare own http interface rather than http details, just like Retrofit did, write less, do more.
+and also someone put forward this request --> [Parameter Decorators?](https://github.com/tc39/proposal-decorators-previous/issues/45)
+
+Now, let us focus on declare own http interface rather than http details, just like Retrofit did, write less, do more.
 
 In the last, thank for all peoples who written or update [Axios](https://github.com/axios/axios) ( javascript http client ) and [Retrofit](https://github.com/square/retrofit) ( java http client ) very much, those are wonderful projects, it teach me a lot.
 
@@ -122,14 +125,16 @@ export interface Interceptor {
 
 Be careful, <strong>the `RealCall` interceptor is the last interceptor, and it must be.</strong>
 
-It is a default interceptor, the value of `order` field is zero. RetrofitJs used it to send all http request by axios object.
+It is a default interceptor, the value of `order` field is zero. RetrofitJs used it to send all http request by Axios object.
+
+<strong>To avoid conflict, the numbers of order field less than 256 ( not including 256 ) are reserved.</strong>
 
 ### Custom interceptor
 Your can easily to implement your own interceptor, just like this.
 
 ```typescript
 class MyInterceptor implement Interceptor {
-	public order: number = 100;
+	public order: number = 256;
 	public init( config: RetrofitConfig ): void {
 		// Initializing your interceptor
 	}
@@ -145,6 +150,57 @@ class MyInterceptor implement Interceptor {
 Note `chain.proceed( chain.request() )`, this code decide whether the request will continue.
 
 If you calling with `chain.proceed`, current request will be transfer to next interceptor. Otherwise the rest interceptor will not be active. And the whole process will be terminate and active error handler if any error throw from interceptor chain.
+
+## Plugin
+In fact, plugins are interceptor, You can write you own plugin for RetrofitJs.
+```
+Retrofit.use( new MyInterceptor implements Interceptor {
+	public order: number = 20;
+	
+	public init( config: RetrofitConfig ): void {
+	}
+	
+	public intercept( chain: Chain ): Promise<ResponseInterface<any>> {
+	}
+} );
+```
+
+It will add all interceptors to `Retrofit` when you create an instance.
+
+There are no limit to the order field of plugins. In fact, there numbers are reserved for plugins and default interceptors.
+
+And this is all default interceptor:
+
+interceptor						| 	order
+:--:								| 	:--:
+RealCall							|	0
+RetryRequestInterceptor	|	1
+LoggerInterceptor				|	5
+
+### RetryRequestInterceptor
+This interceptor is disable by default, it will retry with random time when idempotent requesting have a network anomaly. like connection timeout when you send 'GET' request.
+
+If you want to use it, you should set `maxTry` and `timeout` in `RetrofitConfig`.
+
+You can setting in `RetrofitConfig`:
+```
+{
+	"maxTry": "number",
+	"retryCondition": "RetryCondition"
+}
+```
+
+`RetryCondition` is an interface, interceptor will try to send request again if `RetryCondition.handler` return true.
+
+### LoggerInterceptor
+This interceptor disable by default, it will record all request / response ( or error ) and print it on console.
+
+You can setting in `RetrofitConfig`:
+```
+{
+	"debug": "boolean"
+}
+```
 
 ## Cancellation
 You can easily to cancel a request.
