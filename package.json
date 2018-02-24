@@ -1,6 +1,6 @@
 {
   "name": "retrofitjs",
-  "version": "0.3.6",
+  "version": "0.3.7",
   "description": "Axios based declarative HTTP client for the browser and node.js",
   "scripts": {
     "dev": "webpack-dev-server"

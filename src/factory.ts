@@ -25,6 +25,34 @@ class Validation {
       .map( name => ( <any>this )[ name ]() );
   }
 
+  private noMatchRestfulPath(): MetadataValidator {
+    return {
+      handler( metadata: MethodMetadata ): void {
+        let matcher = /:([\w\-_]+)/g,
+          hasRestfulClassPath = metadata.classPath && matcher.test( <string>metadata.classPath ),
+          hasRestfulMethodPath = metadata.methodPath && matcher.test( <string>metadata.methodPath ),
+          hasRestfulPathVariable = metadata.restfulMapper && !metadata.restfulMapper.isEmpty();
+
+        if ( ( hasRestfulClassPath || hasRestfulMethodPath ) && !hasRestfulPathVariable ) {
+          let url = "";
+
+          if ( hasRestfulClassPath ) {
+            url += metadata.classPath;
+          }
+
+          if ( hasRestfulMethodPath ) {
+            url += ( "/" + metadata.methodPath );
+          }
+
+          url = url.replace( /(\/{2,})/g,
+            ( match: string, key: string ): string => match.replace( key, "/" ) );
+
+          throw new PathVariableNotMatchException( `You may missing some path variables in ${url}.` );
+        }
+      }
+    };
+  }
+
   private noBodyOrFormInGetRequest(): MetadataValidator {
     return {
       handler( metadata: MethodMetadata ): void {

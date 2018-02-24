@@ -1,4 +1,4 @@
-import { ResponseInterface, GET, HTTP, Retrofit, RetrofitConfig, RetrofitPromise, Chain, Interceptor } from "..";
+import { Chain, GET, HTTP, Interceptor, ResponseInterface, Retrofit, RetrofitConfig, RetrofitPromise } from "..";
 
 
 let retrofit = Retrofit.getBuilder()
@@ -11,8 +11,8 @@ let retrofit = Retrofit.getBuilder()
   .build();
 
 class Parent {
-  @GET( "/a1_testing/:a1" )
-  public demo1(): RetrofitPromise<string> & void {
+  @GET( "/a1_testing" )
+  public demo1(): RetrofitPromise<string> {
   }
 }
 
@@ -27,8 +27,7 @@ Retrofit.use( new class MyInterceptor implements Interceptor {
   }
 
   intercept( chain: Chain ): Promise<ResponseInterface<any>> {
-    console.log("123");
-    return chain.proceed(chain.request());
+    return chain.proceed( chain.request() );
   }
 } );
 

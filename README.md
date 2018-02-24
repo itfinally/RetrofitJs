@@ -363,7 +363,7 @@ In last, Do not use `Buffer` object as parameter, I try to use the buffer object
 ### Stream download
 In Browser, There is no way to download file by Ajax because Ajax always responding with string data, but you can use tag iframe to active browser download.
 
-But you can download file on node, as this follows:
+You can download file on node, as this follows:
 
 ```typescript
 @ResponseBody( ResponseType.STREAM )
