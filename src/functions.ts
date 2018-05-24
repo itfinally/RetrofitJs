@@ -5,7 +5,7 @@ import {
 import { Chain, Interceptor } from "./core/interceptors";
 import { AxiosInstance } from "axios";
 import * as FormData from "form-data";
-import { CoreUtils, HashSet, IllegalStateException, Set } from "jcdt";
+import { CoreUtils, HashSet, IllegalStateException, Lang, Set } from "jcdt";
 
 export class RealCall implements Interceptor {
   public order: number = 0;
@@ -472,10 +472,10 @@ export class LoggerInterceptor implements Interceptor {
     requestDetails[ "method" ] = `${request.method}`;
     requestDetails[ "headers" ] = request.headers ? request.headers : Object.create( null );
 
-    if ( CoreUtils.isString( request.data ) ) {
+    if ( Lang.isString( request.data ) ) {
       requestDetails[ "data" ] = request.data;
 
-    } else if ( request.data instanceof FormData || !CoreUtils.isNone( request.data ) ) {
+    } else if ( request.data instanceof FormData || !Lang.isNone( request.data ) ) {
       requestDetails[ "data" ] = "[Object]";
     }
 

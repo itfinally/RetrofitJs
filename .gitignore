@@ -3,9 +3,5 @@
 .DS_store
 
 dist
-target
 node_modules
-
-*.map
-src/**/*.js
-!src/core/proxy.js
+package-lock.json

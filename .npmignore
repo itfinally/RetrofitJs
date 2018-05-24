@@ -5,15 +5,8 @@
 .gitignore
 .npmignore
 
-*.map
-src/**/*.js
-!src/core/proxy.js
-
-test
-target
 node_modules
 npm-debug.log
+tsconfig.json
 webpack.config.js
-
-*.json
-!package.json
+package-lock.json

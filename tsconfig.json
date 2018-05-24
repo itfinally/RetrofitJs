@@ -1,20 +1,19 @@
 {
   "compilerOptions": {
-    "watch": true,
     "strict": true,
-    "allowJs": true,
-    "target": "es6",
     "sourceMap": true,
+    "target": "es2016",
+    "outDir": "./dist",
     "module": "commonjs",
-//    "sourceRoot": "./src",
+    "sourceRoot": "./src",
     "removeComments": true,
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true
   },
   "exclude": [
     "node_modules",
-    "definition",
-    "target",
+//    "./*.js",
+    "types",
     "dist"
   ]
 }

@@ -1,4 +1,4 @@
-import { CoreUtils, HashMap, HashSet, IllegalArgumentException, IllegalStateException, Map, Set } from "jcdt";
+import { HashMap, HashSet, IllegalArgumentException, IllegalStateException, Lang, Map, Set } from "jcdt";
 import { RequestMethod, ResponseType } from "./core/define";
 
 export interface MethodMetadata {
@@ -26,17 +26,17 @@ export interface MethodMetadata {
 let metadataMapper: Map<string, MethodMetadata> = new HashMap(),
   once: Set<string> = new HashSet();
 
-class CollectorUtils {
+class Collectors {
   private static classMapper: Map<Function, string> = new HashMap();
   private static methodMapper: Map<string, string> = new HashMap();
 
   public static getOrBuildKey( constructor: Function, method: string = "none" ) {
-    let classMapper = CollectorUtils.classMapper,
-      methodMapper = CollectorUtils.methodMapper,
+    let classMapper = Collectors.classMapper,
+      methodMapper = Collectors.methodMapper,
 
       part1: string = classMapper.get( constructor ),
       part2: string = methodMapper.get( method ),
-      tempUUID: string = CoreUtils.uuid().replace( /-/g, "" );
+      tempUUID: string = Lang.uuid().replace( /-/g, "" );
 
     if ( !part1 ) {
       part1 = tempUUID.substr( 0, 16 );
@@ -55,7 +55,7 @@ class CollectorUtils {
     // if target is a Function, that mean target is constructor
     // otherwise, target is a prototype object
     let constructor = target instanceof Function ? target : target.constructor,
-      methodId = CollectorUtils.getOrBuildKey( constructor, method ),
+      methodId = Collectors.getOrBuildKey( constructor, method ),
       alias = `${methodId}_${name}`;
 
     return [ methodId, alias ];
@@ -66,7 +66,7 @@ export class Decorators {
   private static metadataCache: Map<string, MethodMetadata> = new HashMap();
 
   public static getMetadata( constructor: Function, method: string ): MethodMetadata {
-    let key = CollectorUtils.getOrBuildKey( constructor, method );
+    let key = Collectors.getOrBuildKey( constructor, method );
 
     if ( this.metadataCache.containsKey( key ) ) {
       return Object.assign( Object.create( null ), this.metadataCache.get( key ) );
@@ -74,7 +74,7 @@ export class Decorators {
 
     let methodMetadata = this.findMethodMetadata( constructor.prototype, method );
 
-    if ( CoreUtils.isNone( methodMetadata ) ) {
+    if ( Lang.isNone( methodMetadata ) ) {
       this.metadataCache.put( key, <any>null );
       return <any>null;
     }
@@ -88,7 +88,7 @@ export class Decorators {
   }
 
   private static findMethodMetadata( prototype: object, method: string ): MethodMetadata {
-    let key = CollectorUtils.getOrBuildKey( prototype.constructor, method );
+    let key = Collectors.getOrBuildKey( prototype.constructor, method );
 
     if ( prototype === Object.prototype ) {
       return <any>null;
@@ -102,7 +102,7 @@ export class Decorators {
   }
 
   private static findClassMetadata( prototype: object, metadata: MethodMetadata = Object.create( null ) ): MethodMetadata {
-    let key = CollectorUtils.getOrBuildKey( prototype.constructor );
+    let key = Collectors.getOrBuildKey( prototype.constructor );
 
     if ( prototype === Object.prototype ) {
       return metadata;
@@ -133,13 +133,13 @@ export class Decorators {
 function basicMethodAnnotation( name: string, callbackFn: ( metadata: MethodMetadata, target: Object ) => void ): Function {
   return ( target: Object | Function, method: string, descriptor: PropertyDescriptor ) => {
     // third-param is number type in parameter decorators
-    if ( CoreUtils.isNumber( descriptor ) ) {
+    if ( Lang.isNumber( descriptor ) ) {
       throw new IllegalStateException( "Method decorator must be use to decorate class constructor or method." );
     }
 
-    let [ key, alias ] = CollectorUtils.getKeyAndAlias( target, method, name );
+    let [ key, alias ] = Collectors.getKeyAndAlias( target, method, name );
 
-    if ( CoreUtils.isNone( alias ) ) {
+    if ( Lang.isNone( alias ) ) {
       return descriptor;
     }
 
@@ -158,13 +158,13 @@ function basicMethodAnnotation( name: string, callbackFn: ( metadata: MethodMeta
 
 function basicParameterAnnotation( callbackFn: ( metadata: MethodMetadata, parameterIndex: number ) => void ): Function {
   return ( target: Object, methodName: string | symbol, parameterIndex: number ) => {
-    if ( CoreUtils.isNone( parameterIndex ) || !CoreUtils.isNumber( parameterIndex ) ) {
+    if ( Lang.isNone( parameterIndex ) || !Lang.isNumber( parameterIndex ) ) {
       throw new IllegalStateException( "Parameter decorator must be use to decorate parameter." );
     }
 
-    let [ key, alias ] = CollectorUtils.getKeyAndAlias( target, <string>methodName, parameterIndex.toString() );
+    let [ key, alias ] = Collectors.getKeyAndAlias( target, <string>methodName, parameterIndex.toString() );
 
-    if ( CoreUtils.isNone( alias ) ) {
+    if ( Lang.isNone( alias ) ) {
       return;
     }
 
@@ -219,12 +219,12 @@ export let Body: Function = basicParameterAnnotation( ( metadata, parameterIndex
 } );
 
 export function Path( name: string ): Function {
-  if ( !CoreUtils.isString( name ) ) {
+  if ( !Lang.isString( name ) ) {
     throw new IllegalArgumentException( "Require path name." );
   }
 
   return basicParameterAnnotation( ( metadata, parameterIndex ) => {
-    if ( CoreUtils.isNone( metadata.restfulMapper ) ) {
+    if ( Lang.isNone( metadata.restfulMapper ) ) {
       metadata.restfulMapper = new HashMap();
     }
 
@@ -233,12 +233,12 @@ export function Path( name: string ): Function {
 }
 
 export function Query( name: string ): Function {
-  if ( !CoreUtils.isString( name ) ) {
+  if ( !Lang.isString( name ) ) {
     throw new IllegalArgumentException( "Require query name." );
   }
 
   return basicParameterAnnotation( ( metadata, parameterIndex ) => {
-    if ( CoreUtils.isNone( metadata.queryMapper ) ) {
+    if ( Lang.isNone( metadata.queryMapper ) ) {
       metadata.queryMapper = new HashMap();
     }
 
@@ -247,50 +247,37 @@ export function Query( name: string ): Function {
 }
 
 export let QueryMap: Function = basicParameterAnnotation( ( metadata, parameterIndex ) => {
-  if ( CoreUtils.isNone( metadata.queryMaps ) ) {
+  if ( Lang.isNone( metadata.queryMaps ) ) {
     metadata.queryMaps = new HashSet();
   }
 
   ( <Set<number>>metadata.queryMaps ).add( parameterIndex );
 } );
 
-export function Headers( headers: string | string[] ): Function {
-  if ( CoreUtils.isNone( headers ) ) {
+export function Headers( ...headers: string[] ): Function {
+  if ( Lang.isNone( headers ) ) {
     throw new IllegalArgumentException( "Require headers." );
   }
 
   return basicMethodAnnotation( "headers", metadata => {
-    if ( CoreUtils.isNone( metadata.headers ) ) {
+    if ( Lang.isNone( metadata.headers ) ) {
       metadata.headers = new HashSet();
     }
 
-    let headersSet: Set<string> = <Set<string>>metadata.headers,
-      headersArr: string[] = [];
-
-    if ( CoreUtils.isString( headers ) ) {
-      headersArr.push( <string>headers );
-
-    } else if ( CoreUtils.isSimpleObject( headers ) ) {
-      headersArr.push( ...headers );
-
-    } else {
-      throw new IllegalArgumentException( "Illegal header." );
-    }
-
-    headersArr.forEach( header => {
+    headers.forEach( header => {
       header = header.trim();
 
       if ( !/[\w\-]+\s*:\s*.+/.test( header ) ) {
         throw new IllegalArgumentException( `Illegal header '${header}'.` );
       }
 
-      headersSet.add( header );
+      (<Set<string>>metadata.headers).add( header );
     } );
   } );
 }
 
 export function Header( name: string ): Function {
-  if ( !CoreUtils.isString( name ) ) {
+  if ( !Lang.isString( name ) ) {
     throw new IllegalArgumentException( "Require header name." );
   }
 
@@ -306,12 +293,12 @@ export function Header( name: string ): Function {
 export let FormUrlEncoded: Function = basicMethodAnnotation( "form", metadata => metadata.isFormCommit = true );
 
 export function Field( name: string ): Function {
-  if ( !CoreUtils.isString( name ) ) {
+  if ( !Lang.isString( name ) ) {
     throw new IllegalArgumentException( "Require field name." );
   }
 
   return basicParameterAnnotation( ( metadata, parameterIndex ) => {
-    if ( CoreUtils.isNone( metadata.fieldMapper ) ) {
+    if ( Lang.isNone( metadata.fieldMapper ) ) {
       metadata.fieldMapper = new HashMap();
     }
 
@@ -320,7 +307,7 @@ export function Field( name: string ): Function {
 }
 
 export let FieldMap: Function = basicParameterAnnotation( ( metadata, parameterIndex ) => {
-  if ( CoreUtils.isNone( metadata.fieldMaps ) ) {
+  if ( Lang.isNone( metadata.fieldMaps ) ) {
     metadata.fieldMaps = new HashSet();
   }
 
@@ -330,7 +317,7 @@ export let FieldMap: Function = basicParameterAnnotation( ( metadata, parameterI
 export let Config: Function = basicParameterAnnotation( ( metadata, parameterIndex ) => metadata.configIndex = parameterIndex );
 
 export function ResponseBody( name: ResponseType = ResponseType.JSON ): Function {
-  if ( !CoreUtils.isString( name ) ) {
+  if ( !Lang.isString( name ) ) {
     throw new IllegalArgumentException( "Require field name." );
   }
 
@@ -348,7 +335,7 @@ export let PartMap: Function = basicParameterAnnotation( ( metadata, parameterIn
 } );
 
 export function Part( name: string ): Function {
-  if ( !CoreUtils.isString( name ) ) {
+  if ( !Lang.isString( name ) ) {
     throw new IllegalArgumentException( "Require field name." );
   }
 

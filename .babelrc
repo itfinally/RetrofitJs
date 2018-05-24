@@ -3,6 +3,6 @@
     "env"
   ],
   "plugins": [
-    "transform-decorators-legacy"
+    "transform-runtime"
   ]
 }

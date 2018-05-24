@@ -1,4 +1,11 @@
-import { CoreUtils, HashSet, IllegalArgumentException, IllegalStateException, NullPointException, Set } from "jcdt";
+import {
+  HashSet,
+  IllegalArgumentException,
+  IllegalStateException,
+  Lang,
+  NullPointException,
+  Set
+} from "jcdt";
 import { RequestInterFace, ResponseInterface, RetrofitConfig, RetrofitRequest } from "./define";
 
 export interface Chain {
@@ -40,7 +47,7 @@ export abstract class InterceptorChainActor {
         // this is a recursive-chain function
         // this-proceed -> interceptor-proceed-1 -> this-proceed -> interceptor-proceed-2 -> ...
         public async proceed( request: RequestInterFace ): Promise<ResponseInterface> {
-          if ( CoreUtils.isNone( request ) ) {
+          if ( Lang.isNone( request ) ) {
             throw new NullPointException( "Request must not be null." );
           }
 
@@ -87,8 +94,8 @@ export abstract class InterceptorChainActor {
 
     this.localInterceptors = this.getInterceptors().toArray();
     this.localInterceptors.sort( ( a: Interceptor, b: Interceptor ): number => {
-      let aOrder = CoreUtils.isNumber( a.order ) && a.order >= 0 ? a.order : 9999,
-        bOrder = CoreUtils.isNumber( b.order ) && b.order >= 0 ? b.order : 9999;
+      let aOrder = Lang.isNumber( a.order ) && a.order >= 0 ? a.order : 9999,
+        bOrder = Lang.isNumber( b.order ) && b.order >= 0 ? b.order : 9999;
 
       // to small from lager
       return aOrder === bOrder ? 0 : aOrder > bOrder ? -1 : 1;
@@ -111,7 +118,7 @@ export class ApplicationInterceptorChainActor extends InterceptorChainActor {
   public constructor( ...interceptors: Interceptor[] ) {
     super();
 
-    if ( !CoreUtils.isNone( interceptors ) ) {
+    if ( !Lang.isNone( interceptors ) ) {
       let arr = this.interceptors;
       interceptors.forEach( item => arr.add( item ) );
     }

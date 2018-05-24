@@ -1,11 +1,21 @@
 import { MethodMetadata } from "./decorators";
 import {
-  CoreUtils, HashMap, HashSet, IllegalArgumentException, IllegalStateException, IndexOutOfBoundsException, Map,
-  Set, StringUtils
+  CoreUtils,
+  HashMap,
+  HashSet,
+  IllegalArgumentException,
+  IllegalStateException,
+  IndexOutOfBoundsException, Lang,
+  Map,
+  Set,
+  Strings
 } from "jcdt";
 import { RequestInterFace, RequestMethod, ResponseType, RetrofitRequest } from "./core/define";
 import {
-  BodyNotMatchException, HeaderNotMatchException, IllegalRequestException, PathVariableNotMatchException,
+  BodyNotMatchException,
+  HeaderNotMatchException,
+  IllegalRequestException,
+  PathVariableNotMatchException,
   QueryParamNotMatchException
 } from "./core/exception";
 
@@ -184,7 +194,7 @@ export class RequestBuilder {
     return {
       order: 1,
       handler( metadata: MethodMetadata, parameter: any[], request: RequestInterFace ): void {
-        if ( StringUtils.isBlank( <string>request.url ) || !metadata.restfulMapper ) {
+        if ( Strings.isBlank( <string>request.url ) || !metadata.restfulMapper ) {
           return;
         }
 
@@ -209,11 +219,11 @@ export class RequestBuilder {
     return {
       order: 1,
       handler( metadata: MethodMetadata, parameter: any[], request: RequestInterFace ): void {
-        if ( StringUtils.isBlank( <string>request.url ) || !( metadata.queryMaps || metadata.queryMapper ) ) {
+        if ( Strings.isBlank( <string>request.url ) || !( metadata.queryMaps || metadata.queryMapper ) ) {
           return;
         }
 
-        let mapper: { [key: string]: string } = Object.create( null ),
+        let mapper: { [ key: string ]: string } = Object.create( null ),
           queryMaps: Set<number> = metadata.queryMaps ? <Set<number>>metadata.queryMaps : new HashSet(),
           queryMapper: Map<string, number> = metadata.queryMapper ? <Map<string, number>>metadata.queryMapper : new HashMap();
 
@@ -230,7 +240,7 @@ export class RequestBuilder {
             throw new IndexOutOfBoundsException( `The url '${request.url}' variable @QueryMap is out of index.` );
           }
 
-          if ( !CoreUtils.isSimpleObject( parameter[ index ] ) ) {
+          if ( !Lang.isPureObject( parameter[ index ] ) ) {
             throw new QueryParamNotMatchException( "@QueryMap require a object." );
           }
 
@@ -258,7 +268,7 @@ export class RequestBuilder {
           return;
         }
 
-        let mapper: { [key: string]: string } = Object.create( null ),
+        let mapper: { [ key: string ]: string } = Object.create( null ),
           headers: Set<string> = metadata.headers ? <Set<string>>metadata.headers : new HashSet(),
           headersMapper: Map<string, number> = metadata.headersMapper ? <Map<string, number>>metadata.headersMapper : new HashMap();
 
@@ -273,7 +283,7 @@ export class RequestBuilder {
         for ( let header of headers ) {
           let [ key, value ] = header.trim().split( ":" );
 
-          if ( StringUtils.isBlank( key ) || StringUtils.isBlank( value ) ) {
+          if ( Strings.isBlank( key ) || Strings.isBlank( value ) ) {
             throw new HeaderNotMatchException( `@Header require key-value entry.` );
           }
 
@@ -293,7 +303,7 @@ export class RequestBuilder {
           return;
         }
 
-        let mapper: { [key: string]: string } = Object.create( null ),
+        let mapper: { [ key: string ]: string } = Object.create( null ),
           partMaps: Set<number> = metadata.partMaps ? <Set<number>>metadata.partMaps : new HashSet(),
           partMapper: Map<string, number> = metadata.partMapper ? <Map<string, number>>metadata.partMapper : new HashMap();
 
@@ -310,7 +320,7 @@ export class RequestBuilder {
             throw new IndexOutOfBoundsException( `The url '${request.url}' variable @PartMap is out of index.` );
           }
 
-          if ( !CoreUtils.isSimpleObject( parameter[ index ] ) ) {
+          if ( !Lang.isPureObject( parameter[ index ] ) ) {
             throw new BodyNotMatchException( "@PartMap require a object." );
           }
 
@@ -353,7 +363,7 @@ export class RequestBuilder {
           return;
         }
 
-        let mapper: { [key: string]: string } = Object.create( null ),
+        let mapper: { [ key: string ]: string } = Object.create( null ),
           fieldMaps: Set<number> = metadata.fieldMaps ? <Set<number>>metadata.fieldMaps : new HashSet(),
           fieldMapper: Map<string, number> = metadata.fieldMapper ? <Map<string, number>>metadata.fieldMapper : new HashMap();
 
@@ -370,7 +380,7 @@ export class RequestBuilder {
             throw new IndexOutOfBoundsException( `The url '${request.url}' variable @FieldMap is out of index.` );
           }
 
-          if ( !CoreUtils.isSimpleObject( parameter[ index ] ) ) {
+          if ( !Lang.isPureObject( parameter[ index ] ) ) {
             throw new BodyNotMatchException( "@FieldMap require a object." );
           }
 
@@ -397,8 +407,8 @@ export class RequestBuilder {
         }
 
         let body = parameter[ <number>metadata.requestBodyIndex ];
-        if ( !CoreUtils.isSimpleObject( body ) ) {
-          throw new BodyNotMatchException( "@Body require a object." );
+        if ( !Lang.isPureObject( body ) ) {
+          throw new BodyNotMatchException( "@Body require a pure object." );
         }
 
         request.data = body;
@@ -433,8 +443,8 @@ export class RequestBuilder {
         }
 
         let config = parameter[ <number>metadata.configIndex ];
-        if ( !CoreUtils.isSimpleObject( config ) ) {
-          throw new IllegalArgumentException( "Config require a object." );
+        if ( !Lang.isPureObject( config ) ) {
+          throw new IllegalArgumentException( "Config require a pure object." );
         }
 
         Object.keys( config ).forEach( name => ( <any>request )[ name ] = config[ name ] );
@@ -443,7 +453,7 @@ export class RequestBuilder {
   }
 
   public build( metadata: MethodMetadata, parameters: any[] ): RequestInterFace {
-    if ( CoreUtils.isNone( metadata ) ) {
+    if ( Lang.isNone( metadata ) ) {
       throw new IllegalArgumentException( "Require metadata to build request." );
     }
 

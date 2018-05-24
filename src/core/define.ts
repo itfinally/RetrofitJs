@@ -1,4 +1,4 @@
-import { CoreUtils } from "jcdt";
+import { Lang } from "jcdt";
 
 import Axios, {
   AxiosAdapter, AxiosBasicCredentials, AxiosProxyConfig, AxiosRequestConfig,
@@ -101,7 +101,7 @@ export class RetrofitRequest implements RequestInterFace {
   public proxy?: AxiosProxyConfig;
 
   public constructor( config?: RequestInterFace ) {
-    if ( !CoreUtils.isNone( config ) ) {
+    if ( !Lang.isNone( config ) ) {
       Object.assign( this, config );
     }
 
@@ -136,7 +136,7 @@ export class RetrofitResponse<T = any> implements ResponseInterface<T> {
   public config: RequestInterFace;
 
   public constructor( config: RequestInterFace, response?: AxiosResponse ) {
-    if ( !CoreUtils.isNone( response ) ) {
+    if ( !Lang.isNone( response ) ) {
       Object.assign( this, response );
     }
 

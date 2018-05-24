@@ -1,13 +1,23 @@
 import Axios, { AxiosInstance } from "axios";
 import {
-  ArrayList, Assert, CoreUtils, Exception, HashMap, IllegalArgumentException, IllegalStateException, List,
+  ArrayList,
+  Assert,
+  Exception,
+  HashMap,
+  IllegalArgumentException,
+  IllegalStateException,
+  Lang,
+  List,
   Map
 } from "jcdt";
 
 import { RequestBuilder } from "./factory";
 import { Proxy, ProxyHandler } from "./core/proxy";
 import {
-  ConnectException, IOException, RequestCancelException, RequestTimeoutException,
+  ConnectException,
+  IOException,
+  RequestCancelException,
+  RequestTimeoutException,
   SocketException
 } from "./core/exception";
 import { Decorators, MethodMetadata } from "./decorators";
@@ -24,9 +34,16 @@ interface RequestProxiesConfig {
 module Proxies {
   let builder: RequestBuilder = new RequestBuilder(),
     handlers: List<( request: RequestInterFace, reason: any ) => Exception> = new ArrayList(),
-    exceptionSelector = ( request: RequestInterFace, reason: any ) => {
-      let exception: Exception = <any>null;
+    exceptionSelector = ( request: RequestInterFace, reason: any ): Error | null => {
+      if ( reason instanceof Error ) {
+        return reason;
+      }
 
+      if ( Lang.isNone( reason ) ) {
+        return null;
+      }
+
+      let exception: Exception = <any>null;
       handlers.forEach( handler => ( exception = handler( request, reason ) ) !== null );
 
       return null === exception ? new IOException( reason.message ) : exception;
@@ -39,7 +56,7 @@ module Proxies {
 
   export class RequestProxies<T = any> extends ProxyHandler<T> {
     private proxyCls: any;
-    private toolBox: RequestProxiesConfig;
+    private readonly toolBox: RequestProxiesConfig;
 
     public constructor( box: RequestProxiesConfig ) {
       super();
@@ -102,7 +119,7 @@ interface RetrofitBuilder {
 }
 
 export interface ErrorHandler {
-  handler( realReason: any, exception: Exception ): void;
+  handler( realReason: any, exception: Exception | null ): void;
 }
 
 export interface RetrofitBuilderFactory {
@@ -213,7 +230,7 @@ export class Retrofit {
     // clear up
     buf.clear();
 
-    this.errorHandler = !CoreUtils.isNone( configure.errorHandler ) ? configure.errorHandler : <any>null;
+    this.errorHandler = !Lang.isNone( configure.errorHandler ) ? configure.errorHandler : <any>null;
   }
 
   public getEngine(): AxiosInstance {
@@ -237,7 +254,7 @@ export class Retrofit {
     } );
   }
 
-  public create<T>( cls: object ): T {
+  public create<T>( cls: any ): T {
     if ( !( cls instanceof Object ) ) {
       throw new TypeError( `Expect class object but got ${typeof cls}` );
     }
